@@ -45,9 +45,11 @@ const { handleSubmit, isFieldDirty, resetForm } = useForm({
 
 const onSubmit = handleSubmit(async (values) => {
   try {
+    const { data: { user } } = await supabase.auth.getUser();
     const { data, error } = await supabase.from('transactions').insert({
       amount: values.amount,
-      category_id: values.category
+      category_id: values.category,
+      user_id: (user!).id
     })
 
     if (error) throw error

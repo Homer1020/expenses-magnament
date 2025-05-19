@@ -1,12 +1,22 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import supabase from '@/lib/supabase';
 import type { Transaction } from '@/types';
 import { MoreHorizontal } from 'lucide-vue-next'
 
 defineProps<{
   transaction: Transaction
 }>()
+
+const deleteTransaction = async (id: number) => {
+  const response = await supabase
+    .from('transactions')
+    .delete()
+    .eq('id', id)
+
+  console.log({response})
+}
 </script>
 
 <template>
@@ -19,7 +29,7 @@ defineProps<{
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuItem>Editar</DropdownMenuItem>
-      <DropdownMenuItem>Eliminar</DropdownMenuItem>
+      <DropdownMenuItem @click="() => deleteTransaction(transaction.id)">Eliminar</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

@@ -29,13 +29,17 @@ const handleLogin = async () => {
   })
 
   if(error) {
-    console.log({error})
-    toast('Event has been created', {
-      description: 'Sunday, December 03, 2023 at 9:00 AM',
-      action: {
-        label: 'Undo',
-        onClick: () => console.log('Undo'),
-      },
+    let message = 'Hubo un error';
+    // let description = 'Por favor intente nuevamente.';
+
+    if(error.code === 'invalid_credentials') message = 'Credenciales invalidas';
+
+    toast.error(message, {
+      // description: 'Sunday, December 03, 2023 at 9:00 AM',
+      // action: {
+      //   label: 'Undo',
+      //   onClick: () => console.log('Undo'),
+      // },
     })
     return
   }
@@ -45,7 +49,7 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="mx-auto max-w-4/12 mt-20">
+  <div class="mx-5 lg:mx-auto max-w-lg mt-20">
     <div class="flex flex-col gap-6">
       <Card>
         <CardHeader>
