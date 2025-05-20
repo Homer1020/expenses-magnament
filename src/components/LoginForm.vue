@@ -49,7 +49,7 @@ const handleLogin = async () => {
 </script>
 
 <template>
-  <div class="mx-5 lg:mx-auto max-w-lg mt-20">
+  <div class="mx-2 lg:mx-auto max-w-lg mt-20">
     <div class="flex flex-col gap-6">
       <Card>
         <CardHeader>
