@@ -10,20 +10,22 @@ import {
   getLocalTimeZone,
 } from '@internationalized/date'
 import { CalendarIcon } from 'lucide-vue-next'
-import { type Ref, watch } from 'vue'
 
 const df = new DateFormatter('en-US', {
   dateStyle: 'medium',
 })
 
-const value = defineModel() as Ref<DateRange>
+const { modelValue } = defineProps<{
+  modelValue: DateRange
+}>()
 
-watch(value, value => {
-  emit('change', value);
-});
+const emit = defineEmits<{
+  (e: 'update:modelValue', value: DateRange): void
+}>()
 
-const emit = defineEmits(['change']);
-
+function onRangeChange(newValue: DateRange) {
+  emit('update:modelValue', newValue)
+}
 </script>
 
 <template>
@@ -32,18 +34,18 @@ const emit = defineEmits(['change']);
       <Button
         variant="outline"
         :class="cn(
-          'w-[280px] justify-start text-left font-normal',
-          !value && 'text-muted-foreground',
+          'w-full lg:w-[280px] justify-start text-left font-normal',
+          !modelValue && 'text-muted-foreground',
         )"
       >
         <CalendarIcon class="mr-2 h-4 w-4" />
-        <template v-if="value.start">
-          <template v-if="value.end">
-            {{ df.format(value.start.toDate(getLocalTimeZone())) }} - {{ df.format(value.end.toDate(getLocalTimeZone())) }}
+        <template v-if="modelValue.start">
+          <template v-if="modelValue.end">
+            {{ df.format(modelValue.start.toDate(getLocalTimeZone())) }} - {{ df.format(modelValue.end.toDate(getLocalTimeZone())) }}
           </template>
 
           <template v-else>
-            {{ df.format(value.start.toDate(getLocalTimeZone())) }}
+            {{ df.format(modelValue.start.toDate(getLocalTimeZone())) }}
           </template>
         </template>
         <template v-else>
@@ -52,7 +54,12 @@ const emit = defineEmits(['change']);
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0">
-      <RangeCalendar v-model="value" initial-focus :number-of-months="2" @update:start-value="(startDate) => value.start = startDate" />
+      <RangeCalendar
+        :model-value="modelValue"
+        @update:modelValue="onRangeChange"
+        initial-focus
+        :number-of-months="2"
+      />
     </PopoverContent>
   </Popover>
 </template>

@@ -14,19 +14,25 @@ import Button from '@/components/ui/button/Button.vue';
 import { ref } from 'vue';
 import { Input } from '@/components/ui/input';
 import TablePicker from './TablePicker.vue';
-import {
-  CalendarDate,
-} from '@internationalized/date'
+import type { DateRange } from 'reka-ui';
 
 const {
-  transactions
-} = defineProps<{transactions: Transaction[]}>()
+  transactions,
+  dateFilters
+} = defineProps<{transactions: Transaction[], dateFilters: any}>()
+
+const emit = defineEmits<{
+  (e: 'edit'): void
+  (e: 'delete'): void,
+  (e: 'updatedFilters', dateRage: DateRange): void
+}>()
+
 
 const columnFilters = ref<ColumnFiltersState>([]) // can set initial column filter state here
 const globalFilter = ref('')
 const table = useVueTable({
   get data() { return transactions },
-  get columns() { return columns },
+  get columns() { return columns(emit) },
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   // getFilteredRowModel: getFilteredRowModel(),
@@ -52,24 +58,22 @@ const table = useVueTable({
   },
 })
 
-const dateFilters = ref({
-  start: new CalendarDate(2025, 5, 7),
-  end: new CalendarDate(2025, 5, 7).add({ days: 20 }),
-})
+const updateFilters = (dateRange: DateRange) => {
+  emit('updatedFilters', dateRange)
+}
 
-const emit = defineEmits(['updatedDate'])
 </script>
 <template>
-  <div class="mb-3 flex gap-3">
+  <div class="mb-3 space-y-3 lg:space-y-0 lg:flex lg:gap-3">
     <Input
       placeholder="Buscar..."
       v-model="globalFilter"
-      class="max-w-54"
+      class="w-full lg:w-[280px]"
       />
 
     <TablePicker
-      v-model="dateFilters"
-      @change="ev => { emit('updatedDate', ev) }"
+      :modelValue="dateFilters"
+      @update:modelValue="updateFilters"
       />
   </div>
   <Table>

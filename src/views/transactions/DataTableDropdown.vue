@@ -9,6 +9,8 @@ defineProps<{
   transaction: Transaction
 }>()
 
+const emit = defineEmits(['delete'])
+
 const deleteTransaction = async (id: number) => {
   const response = await supabase
     .from('transactions')
@@ -16,6 +18,8 @@ const deleteTransaction = async (id: number) => {
     .eq('id', id)
 
   console.log({response})
+
+  emit('delete');
 }
 </script>
 

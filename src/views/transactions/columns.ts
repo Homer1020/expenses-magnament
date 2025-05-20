@@ -3,7 +3,12 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import DropdownAction from './DataTableDropdown.vue'
 
-export const columns: ColumnDef<Transaction>[] = [
+interface TableEmits {
+  (e: 'edit'): void
+  (e: 'delete'): void
+}
+
+export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
   {
     accessorKey: 'date',
     header: 'Fecha',
@@ -44,7 +49,7 @@ export const columns: ColumnDef<Transaction>[] = [
     cell: ({ row }) => {
       const transaction = row.original
 
-      return h('div', { class: 'relative' }, h(DropdownAction, { transaction }))
+      return h('div', { class: 'relative' }, h(DropdownAction, { transaction, onDelete: () => { emit('delete') } }))
     },
   },
 ]
