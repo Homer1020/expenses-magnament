@@ -23,3 +23,8 @@ export type SupabaseError = {
   hint?: string
   code?: string
 }
+
+export interface Account {
+  name: string
+  id: number
+}

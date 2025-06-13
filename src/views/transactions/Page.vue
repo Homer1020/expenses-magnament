@@ -72,14 +72,14 @@ const updateFilters = async (dateRange: DateRange) => {
   </div>
   <div v-if="loading">Cargando...</div>
   <div v-else-if="error">Error: {{ error.message }}</div>
-  <ul v-else>
+  <div v-else>
     <Table
       :transactions="transactions"
       :date-filters="dateFilters!"
       @delete="fetchTransactions"
       @updatedFilters="updateFilters"
     />
-  </ul>
+  </div>
 </div>
 <Create :open="open" :hide="hide" @reload="fetchTransactions" />
 </template>
