@@ -1,6 +1,5 @@
 import { createWebHistory, createRouter } from 'vue-router'
 
-import HomeView from './views/Home.vue'
 import Transactions from './views/transactions/Page.vue'
 import Dashboard from './views/dashboard/Page.vue'
 import Accounts from './views/accounts/Page.vue'
@@ -18,21 +17,9 @@ declare module 'vue-router' {
 }
 
 export const routes = [
+  
   {
     path: '/',
-    component: HomeView,
-    meta: {
-      breadcrumb: [
-        { title: 'Dashboard' },
-      ]
-    }
-  },
-  {
-    path: '/login',
-    component: Login
-  },
-  {
-    path: '/dashboard',
     component: DashboardLayout,
     meta: {
       requiresAuth: true
@@ -68,6 +55,10 @@ export const routes = [
         }
       },
     ]
+  },
+  {
+    path: '/login',
+    component: Login
   },
 ]
 

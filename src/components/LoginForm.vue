@@ -44,7 +44,7 @@ const handleLogin = async () => {
     return
   }
 
-  router.push({path: '/dashboard', replace: true}) 
+  router.push({path: '/', replace: true}) 
 }
 </script>
 
