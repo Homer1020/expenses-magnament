@@ -29,20 +29,24 @@ const data = {
       items: [
         {
           title: 'Dashboard',
-          url: '/dashboard',
+          url: '/',
           isActive: true,
         },
         {
           title: 'Transacciones',
-          url: '/dashboard/transactions',
+          url: '/transactions',
+        },
+        {
+          title: 'Categorías',
+          url: '/categories',
         },
         {
           title: 'Cuentas',
-          url: '/dashboard/accounts',
+          url: '/accounts',
         },
         {
           title: 'Configuración',
-          url: '/dashboard/settings',
+          url: '/settings',
         },
       ],
     },

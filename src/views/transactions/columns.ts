@@ -4,7 +4,7 @@ import { h } from 'vue'
 import DropdownAction from './DataTableDropdown.vue'
 
 interface TableEmits {
-  (e: 'edit'): void
+  (e: 'edit', transaction: Transaction): void
   (e: 'delete'): void
 }
 
@@ -49,7 +49,11 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
     cell: ({ row }) => {
       const transaction = row.original
 
-      return h('div', { class: 'relative' }, h(DropdownAction, { transaction, onDelete: () => { emit('delete') } }))
+      return h('div', { class: 'relative' }, h(DropdownAction, {
+        transaction,
+        onEdit: () => emit('edit', transaction),
+        onDelete: () => emit('delete'),
+      }))
     },
   },
 ]

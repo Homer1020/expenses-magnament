@@ -12,8 +12,8 @@ export interface Transaction {
   created_at: string
   user_id: string
   date: string
+  category_id: number
   categories: TransactionCategory
-  // Agrega otros campos según tu base de datos
 }
 
 // Tipos para los errores de Supabase

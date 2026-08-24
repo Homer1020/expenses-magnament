@@ -1,22 +1,22 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import * as transactionsService from '@/services/transactions'
-import type { Transaction } from '@/types'
+import * as categoriesService from '@/services/categories'
+import type { TransactionCategory } from '@/types'
 import { MoreHorizontal } from 'lucide-vue-next'
 
 defineProps<{
-  transaction: Transaction
+  category: TransactionCategory
 }>()
 
 const emit = defineEmits(['edit', 'delete'])
 
-const deleteTransaction = async (id: number) => {
+const deleteCategory = async (id: number) => {
   try {
-    await transactionsService.remove(id)
+    await categoriesService.remove(id)
     emit('delete')
   } catch (err) {
-    console.error('Error deleting transaction:', err)
+    console.error('Error deleting category:', err)
   }
 }
 </script>
@@ -31,7 +31,7 @@ const deleteTransaction = async (id: number) => {
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
       <DropdownMenuItem @click="emit('edit')">Editar</DropdownMenuItem>
-      <DropdownMenuItem @click="() => deleteTransaction(transaction.id)">Eliminar</DropdownMenuItem>
+      <DropdownMenuItem @click="() => deleteCategory(category.id)">Eliminar</DropdownMenuItem>
     </DropdownMenuContent>
   </DropdownMenu>
 </template>

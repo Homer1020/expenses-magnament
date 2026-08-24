@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import Button from '@/components/ui/button/Button.vue';
+import Button from '@/components/ui/button/Button.vue'
 import {
   Dialog,
   DialogContent,
@@ -7,72 +7,94 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
-import { FormField } from '@/components/ui/form';
-import FormControl from '@/components/ui/form/FormControl.vue';
-import FormItem from '@/components/ui/form/FormItem.vue';
-import FormLabel from '@/components/ui/form/FormLabel.vue';
-import FormMessage from '@/components/ui/form/FormMessage.vue';
-import Input from '@/components/ui/input/Input.vue';
-import Select from '@/components/ui/select/Select.vue';
-import SelectContent from '@/components/ui/select/SelectContent.vue';
-import SelectGroup from '@/components/ui/select/SelectGroup.vue';
-import SelectItem from '@/components/ui/select/SelectItem.vue';
-import SelectTrigger from '@/components/ui/select/SelectTrigger.vue';
-import SelectValue from '@/components/ui/select/SelectValue.vue';
-import Textarea from '@/components/ui/textarea/Textarea.vue';
-import supabase from '@/lib/supabase';
-import type { TransactionCategory } from '@/types';
-import { toTypedSchema } from '@vee-validate/zod';
-import { useForm } from 'vee-validate';
-import { ref, watch } from 'vue';
-import * as z from 'zod';
+import { FormField } from '@/components/ui/form'
+import FormControl from '@/components/ui/form/FormControl.vue'
+import FormItem from '@/components/ui/form/FormItem.vue'
+import FormLabel from '@/components/ui/form/FormLabel.vue'
+import FormMessage from '@/components/ui/form/FormMessage.vue'
+import Input from '@/components/ui/input/Input.vue'
+import Select from '@/components/ui/select/Select.vue'
+import SelectContent from '@/components/ui/select/SelectContent.vue'
+import SelectGroup from '@/components/ui/select/SelectGroup.vue'
+import SelectItem from '@/components/ui/select/SelectItem.vue'
+import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
+import SelectValue from '@/components/ui/select/SelectValue.vue'
+import Textarea from '@/components/ui/textarea/Textarea.vue'
+import supabase from '@/lib/supabase'
+import * as categoriesService from '@/services/categories'
+import * as transactionsService from '@/services/transactions'
+import type { Transaction, TransactionCategory } from '@/types'
+import { toTypedSchema } from '@vee-validate/zod'
+import { useForm } from 'vee-validate'
+import { computed, ref, watch } from 'vue'
+import * as z from 'zod'
 
+const emit = defineEmits(['reload'])
 
-const emit = defineEmits(['reload']);
+const { open, hide, transaction } = defineProps<{
+  open: boolean
+  hide: () => void
+  transaction?: Transaction | null
+}>()
+
+const isEditing = computed(() => !!transaction)
 
 const formSchema = toTypedSchema(z.object({
-  amount: z.number(),
+  amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   description: z.string().max(100).optional(),
-  category: z.number()
+  category: z.number(),
 }))
 
-const { open, hide } = defineProps<{ open: boolean, hide: () => void }>()
-
-const { handleSubmit, isFieldDirty, resetForm } = useForm({
+const { handleSubmit, isFieldDirty, resetForm, setValues } = useForm({
   validationSchema: formSchema,
-  validateOnMount: false
-})
-
-const onSubmit = handleSubmit(async (values) => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    const { data, error } = await supabase.from('transactions').insert({
-      amount: values.amount,
-      category_id: values.category,
-      user_id: (user!).id
-    })
-
-    if (error) throw error
-
-    console.log({ data })
-    resetForm()
-    hide()
-    emit('reload')
-  } catch (err) {
-    console.log(err)
-  }
+  validateOnMount: false,
 })
 
 const categories = ref<TransactionCategory[]>([])
 
-watch(() => open, async () => {
-  if (!open) return
+watch(() => open, async (isOpen) => {
+  if (!isOpen) return
+
   try {
-    const { data, error } = await supabase.from('categories').select('*')
-    if (error) throw error
-    categories.value = data
+    categories.value = await categoriesService.getAll()
   } catch (err) {
-    console.log(err)
+    console.error(err)
+  }
+
+  if (transaction) {
+    setValues({
+      category: transaction.category_id,
+      amount: transaction.amount,
+      description: transaction.description ?? '',
+    })
+  } else {
+    resetForm({ values: { category: undefined, amount: undefined, description: '' } })
+  }
+})
+
+const onSubmit = handleSubmit(async (values) => {
+  try {
+    if (isEditing.value && transaction) {
+      await transactionsService.update(transaction.id, {
+        amount: values.amount,
+        description: values.description,
+        category_id: values.category,
+      })
+    } else {
+      const { data: { user } } = await supabase.auth.getUser()
+      await transactionsService.create({
+        amount: values.amount,
+        description: values.description,
+        category_id: values.category,
+        user_id: user!.id,
+      })
+    }
+
+    resetForm()
+    hide()
+    emit('reload')
+  } catch (err) {
+    console.error(err)
   }
 })
 </script>
@@ -81,12 +103,12 @@ watch(() => open, async () => {
   <Dialog :open="open" @update:open="!$event && hide()">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>Agregar Transacción</DialogTitle>
+        <DialogTitle>{{ isEditing ? 'Editar Transacción' : 'Agregar Transacción' }}</DialogTitle>
       </DialogHeader>
       <form @submit="onSubmit" id="transaction-form">
         <FormField v-slot="{ componentField }" name="category" :validate-on-blur="!isFieldDirty">
           <FormItem class="mb-3">
-            <FormLabel>Categoria</FormLabel>
+            <FormLabel>Categoría</FormLabel>
             <Select v-bind="componentField">
               <FormControl class="w-full">
                 <SelectTrigger>
@@ -113,7 +135,7 @@ watch(() => open, async () => {
           <FormItem class="mb-3">
             <FormLabel>Monto (USD)</FormLabel>
             <FormControl>
-              <Input type="number" placeholder="80$" v-bind="componentField" />
+              <Input type="number" step="0.01" placeholder="80" v-bind="componentField" />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -121,9 +143,9 @@ watch(() => open, async () => {
 
         <FormField v-slot="{ componentField }" name="description">
           <FormItem>
-            <FormLabel>Descripcion</FormLabel>
+            <FormLabel>Descripción</FormLabel>
             <FormControl>
-              <Textarea placeholder="Escribe una descripcion" v-bind="componentField" :validate-on-blur="!isFieldDirty" />
+              <Textarea placeholder="Escribe una descripción" v-bind="componentField" :validate-on-blur="!isFieldDirty" />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -131,7 +153,9 @@ watch(() => open, async () => {
       </form>
       <DialogFooter class="mt-4 flex justify-end gap-2">
         <Button type="button" variant="outline" @click="hide">Cancelar</Button>
-        <Button type="submit" form="transaction-form">Continuar</Button>
+        <Button type="submit" form="transaction-form">
+          {{ isEditing ? 'Guardar' : 'Continuar' }}
+        </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>

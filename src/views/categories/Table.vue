@@ -7,31 +7,32 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { Transaction } from '@/types';
-import { columns } from './columns';
-import { FlexRender, getCoreRowModel, useVueTable, getPaginationRowModel, type ColumnFiltersState, getFilteredRowModel } from '@tanstack/vue-table';
-import Button from '@/components/ui/button/Button.vue';
-import { ref } from 'vue';
-import { Input } from '@/components/ui/input';
-import TablePicker from './TablePicker.vue';
-import type { DateRange } from 'reka-ui';
-import ConfirmDialog from '@/components/ConfirmDialog.vue'
-const {
-  transactions,
-  dateFilters
-} = defineProps<{transactions: Transaction[], dateFilters: any}>()
+import type { TransactionCategory } from '@/types'
+import { columns } from './columns'
+import {
+  FlexRender,
+  getCoreRowModel,
+  useVueTable,
+  getPaginationRowModel,
+  type ColumnFiltersState,
+  getFilteredRowModel,
+} from '@tanstack/vue-table'
+import Button from '@/components/ui/button/Button.vue'
+import { ref } from 'vue'
+import { Input } from '@/components/ui/input'
+
+const { categories } = defineProps<{ categories: TransactionCategory[] }>()
 
 const emit = defineEmits<{
-  (e: 'edit', transaction: Transaction): void
+  (e: 'edit', category: TransactionCategory): void
   (e: 'delete'): void
-  (e: 'updatedFilters', dateRage: DateRange): void
 }>()
 
-
-const columnFilters = ref<ColumnFiltersState>([]) // can set initial column filter state here
+const columnFilters = ref<ColumnFiltersState>([])
 const globalFilter = ref('')
+
 const table = useVueTable({
-  get data() { return transactions },
+  get data() { return categories },
   get columns() { return columns(emit) },
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
@@ -57,40 +58,36 @@ const table = useVueTable({
         : updaterOrValue
   },
 })
-
-const updateFilters = (dateRange: DateRange) => {
-  emit('updatedFilters', dateRange)
-}
-
 </script>
+
 <template>
-  <ConfirmDialog />
-  <div class="mb-3 space-y-3 lg:space-y-0 lg:flex lg:gap-3">
+  <div class="mb-3">
     <Input
       placeholder="Buscar..."
       v-model="globalFilter"
       class="w-full lg:w-[280px]"
-      />
-
-    <TablePicker
-      :modelValue="dateFilters"
-      @update:modelValue="updateFilters"
-      />
+    />
   </div>
   <div class="border rounded-md">
     <Table>
       <TableHeader>
         <TableRow v-for="headerGroup in table.getHeaderGroups()" :key="headerGroup.id">
           <TableHead v-for="header in headerGroup.headers" :key="header.id">
-            <FlexRender v-if="!header.isPlaceholder" :render="header.column.columnDef.header"
-              :props="header.getContext()" />
+            <FlexRender
+              v-if="!header.isPlaceholder"
+              :render="header.column.columnDef.header"
+              :props="header.getContext()"
+            />
           </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         <template v-if="table.getRowModel().rows?.length">
-          <TableRow v-for="row in table.getRowModel().rows" :key="row.id"
-            :data-state="row.getIsSelected() ? 'selected' : undefined">
+          <TableRow
+            v-for="row in table.getRowModel().rows"
+            :key="row.id"
+            :data-state="row.getIsSelected() ? 'selected' : undefined"
+          >
             <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
               <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
             </TableCell>
@@ -113,7 +110,7 @@ const updateFilters = (dateRange: DateRange) => {
       :disabled="!table.getCanPreviousPage()"
       @click="table.previousPage()"
     >
-      Previous
+      Anterior
     </Button>
     <Button
       variant="outline"
@@ -121,7 +118,7 @@ const updateFilters = (dateRange: DateRange) => {
       :disabled="!table.getCanNextPage()"
       @click="table.nextPage()"
     >
-      Next
+      Siguiente
     </Button>
   </div>
 </template>

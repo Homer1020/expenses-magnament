@@ -1,6 +1,7 @@
 import { createWebHistory, createRouter } from 'vue-router'
 
 import Transactions from './views/transactions/Page.vue'
+import Categories from './views/categories/Page.vue'
 import Dashboard from './views/dashboard/Page.vue'
 import Accounts from './views/accounts/Page.vue'
 import DashboardLayout from './views/dashboard/Layout.vue'
@@ -51,6 +52,16 @@ export const routes = [
           breadcrumb: [
             { title: 'Dashboard', href: '/' },
             { title: 'Transacciones' }
+          ]
+        }
+      },
+      {
+        path: 'categories',
+        component: Categories,
+        meta: {
+          breadcrumb: [
+            { title: 'Dashboard', href: '/' },
+            { title: 'Categorías' }
           ]
         }
       },
