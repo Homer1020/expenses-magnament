@@ -24,11 +24,11 @@ const data = {
   versions: ['1.0.1', '1.1.0-alpha', '2.0.0-beta1'],
   navMain: [
     {
-      title: 'Getting Started',
+      title: 'Finanzas',
       url: '#',
       items: [
         {
-          title: 'Dashboard',
+          title: 'Panel',
           url: '/',
           isActive: true,
         },

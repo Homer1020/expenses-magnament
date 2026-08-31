@@ -41,7 +41,24 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
     cell: ({ row }) => h('div', row.getValue('category_type')),
     accessorFn: (row) => row.categories.type ? 'Ingreso' : 'Egreso'
   },
-  // ...
+  {
+    accessorKey: 'account',
+    header: 'Cuenta',
+    cell: ({ row }) => {
+      const account = row.original.accounts
+      if (!account) {
+        return h('span', { class: 'text-muted-foreground text-xs italic' }, '-')
+      }
+      return h(
+        'span',
+        {
+          class:
+            'inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20',
+        },
+        account.name
+      )
+    },
+  },
   {
     header: 'Acciones',
     id: 'actions',

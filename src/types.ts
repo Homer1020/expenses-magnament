@@ -14,6 +14,8 @@ export interface Transaction {
   date: string
   category_id: number
   categories: TransactionCategory
+  account_id?: number | null
+  accounts?: Account | null
 }
 
 // Tipos para los errores de Supabase
@@ -25,6 +27,8 @@ export type SupabaseError = {
 }
 
 export interface Account {
-  name: string
   id: number
+  name: string
+  percentage: number
+  created_at?: string
 }

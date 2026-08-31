@@ -9,11 +9,11 @@ interface TableEmits {
 }
 
 export const columns = (emit: TableEmits): ColumnDef<TransactionCategory>[] => [
-  {
-    accessorKey: 'id',
-    header: 'ID',
-    cell: ({ row }) => h('div', String(row.getValue('id'))),
-  },
+  // {
+  //   accessorKey: 'id',
+  //   header: 'ID',
+  //   cell: ({ row }) => h('div', String(row.getValue('id'))),
+  // },
   {
     accessorKey: 'name',
     header: 'Nombre',
