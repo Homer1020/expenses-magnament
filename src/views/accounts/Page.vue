@@ -11,6 +11,7 @@ import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/formatters'
 import { Wallet, TrendingDown, PiggyBank, Sparkles } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 const accounts = ref<Account[]>([])
 const currentMonthTransactions = ref<Transaction[]>([])
@@ -35,9 +36,12 @@ onMounted(async () => {
   try {
     loading.value = true
     await fetchData()
-  } catch (err) {
+  } catch (err: any) {
     error.value = err as PostgrestError
     console.error('Error fetching accounts data:', err)
+    toast.error('Error al cargar cuentas', {
+      description: err?.message || 'No se pudieron sincronizar los datos de cuentas'
+    })
   } finally {
     loading.value = false
   }

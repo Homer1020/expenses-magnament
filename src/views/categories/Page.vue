@@ -6,6 +6,7 @@ import * as categoriesService from '@/services/categories'
 import Table from './Table.vue'
 import Button from '@/components/ui/button/Button.vue'
 import Create from './Create.vue'
+import { toast } from 'vue-sonner'
 
 const categories = ref<TransactionCategory[]>([])
 const loading = ref(true)
@@ -19,9 +20,12 @@ onMounted(async () => {
   try {
     loading.value = true
     await fetchCategories()
-  } catch (err) {
+  } catch (err: any) {
     error.value = err as PostgrestError
     console.error('Error fetching categories:', err)
+    toast.error('Error al cargar categorías', {
+      description: err?.message || 'No se pudieron sincronizar las categorías'
+    })
   } finally {
     loading.value = false
   }

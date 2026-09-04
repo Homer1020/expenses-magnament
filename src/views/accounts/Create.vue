@@ -19,6 +19,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { computed, watch } from 'vue'
 import * as z from 'zod'
+import { toast } from 'vue-sonner'
 
 const emit = defineEmits(['reload'])
 
@@ -55,17 +56,35 @@ watch(() => open, (isOpen) => {
 
 const onSubmit = handleSubmit(async (values) => {
   try {
+    const accounts = await accountsService.getAll();
+
+    const totalPercentage = Object
+      .values(accounts)
+      .filter((acc) => acc.id != account?.id)
+      .reduce((acc, account) => acc + account.percentage, 0)
+    
+    if (totalPercentage + values.percentage > 100) {
+      toast.error('Error', {
+        description: 'El porcentaje total de todas las cuentas no puede exceder el 100%'
+      })
+      return
+    }
+
     if (isEditing.value && account) {
       await accountsService.update(account.id, values)
+      toast.success('Cuenta actualizada correctamente')
     } else {
       await accountsService.create(values)
+      toast.success('Cuenta creada correctamente')
     }
 
     resetForm()
     hide()
     emit('reload')
-  } catch (err) {
-    console.error('Error saving account:', err)
+  } catch (err: any) {
+    toast.error('Error al guardar la cuenta', {
+      description: err?.message || 'Ocurrió un error inesperado'
+    })
   }
 })
 </script>

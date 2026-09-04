@@ -44,10 +44,6 @@ const data = {
           title: 'Cuentas',
           url: '/accounts',
         },
-        {
-          title: 'Configuración',
-          url: '/settings',
-        },
       ],
     },
   ],
@@ -57,10 +53,7 @@ const data = {
 <template>
   <Sidebar v-bind="props">
     <SidebarHeader>
-      <VersionSwitcher
-        :versions="data.versions"
-        :default-version="data.versions[0]"
-      />
+      <VersionSwitcher />
       <SearchForm />
     </SidebarHeader>
     <SidebarContent>

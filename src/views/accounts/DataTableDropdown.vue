@@ -10,6 +10,8 @@ import * as accountsService from '@/services/accounts'
 import type { Account } from '@/types'
 import { MoreHorizontal } from 'lucide-vue-next'
 
+import { toast } from 'vue-sonner'
+
 defineProps<{
   account: Account
 }>()
@@ -19,9 +21,13 @@ const emit = defineEmits(['edit', 'delete'])
 const deleteAccount = async (id: number) => {
   try {
     await accountsService.remove(id)
+    toast.success('Cuenta eliminada correctamente')
     emit('delete')
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error deleting account:', err)
+    toast.error('Error al eliminar la cuenta', {
+      description: err?.message || 'Ocurrió un error inesperado al intentar eliminar la cuenta'
+    })
   }
 }
 </script>

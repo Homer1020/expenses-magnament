@@ -1,27 +1,38 @@
 <script setup lang="ts">
+import { ref, onMounted } from 'vue'
+import type { User } from '@supabase/supabase-js'
+import supabase from '@/lib/supabase'
+import { signOut } from '@/services/auth'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { signOut } from '@/services/auth';
-import { Check, ChevronsUpDown, GalleryVerticalEnd } from 'lucide-vue-next'
+import { ChevronsUpDown, User as UserIcon, LogOut } from 'lucide-vue-next'
 
-import { ref } from 'vue'
-
-const props = defineProps<{
-  versions: string[]
-  defaultVersion: string
+defineProps<{
+  versions?: string[]
+  defaultVersion?: string
 }>()
 
-const selectedVersion = ref(props.defaultVersion)
+const user = ref<User | null>(null)
+
+onMounted(async () => {
+  const { data } = await supabase.auth.getUser()
+  user.value = data.user
+
+  supabase.auth.onAuthStateChange((_event, session) => {
+    user.value = session?.user ?? null
+  })
+})
 </script>
 
 <template>
@@ -33,28 +44,54 @@ const selectedVersion = ref(props.defaultVersion)
             size="lg"
             class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
           >
+            <!-- Avatar / Icono -->
             <div class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-              <GalleryVerticalEnd class="size-4" />
+              <UserIcon class="size-4" />
             </div>
-            <div class="flex flex-col gap-0.5 leading-none">
-              <span class="font-medium">Documentation</span>
-              <span class="">v{{selectedVersion}}</span>
+
+            <!-- Datos del Usuario -->
+            <div class="grid flex-1 text-left text-sm leading-tight">
+              <span class="truncate font-semibold">
+                Expenses Management
+              </span>
+              <span class="truncate text-xs text-muted-foreground">
+                {{ user?.email || 'Cargando...' }}
+              </span>
             </div>
-            <ChevronsUpDown class="ml-auto" />
+
+            <ChevronsUpDown class="ml-auto size-4" />
           </SidebarMenuButton>
         </DropdownMenuTrigger>
+
         <DropdownMenuContent
-          class="w-(--reka-dropdown-menu-trigger-width)"
+          class="w-(--reka-dropdown-menu-trigger-width) min-w-56"
           align="start"
+          side="bottom"
+          :side-offset="4"
         >
-          <DropdownMenuItem
+          <DropdownMenuLabel class="p-0 font-normal">
+            <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+              <div class="grid flex-1 text-left text-sm leading-tight">
+                <span class="truncate font-semibold">
+                  {{ user?.user_metadata?.full_name || 'Mi Cuenta' }}
+                </span>
+                <span class="truncate text-xs text-muted-foreground">
+                  {{ user?.email }}
+                </span>
+              </div>
+            </div>
+          </DropdownMenuLabel>
+
+          <DropdownMenuSeparator />
+
+          <!-- <DropdownMenuItem
             v-for="version in versions"
             :key="version"
             @select="selectedVersion = version"
           >
             v{{ version }}
             <Check v-if="version === selectedVersion" class="ml-auto" />
-          </DropdownMenuItem>
+          </DropdownMenuItem> -->
           <DropdownMenuItem @click="signOut">
             Cerrar Session
           </DropdownMenuItem>

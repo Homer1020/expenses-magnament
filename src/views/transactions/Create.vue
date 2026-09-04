@@ -31,6 +31,7 @@ import { useForm } from 'vee-validate'
 import { computed, ref, watch } from 'vue'
 import * as z from 'zod'
 import { Wallet, AlertCircle, TrendingDown } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 const emit = defineEmits(['reload'])
 
@@ -122,8 +123,11 @@ const fetchBudgetData = async () => {
     categories.value = cats
     accounts.value = accs
     currentMonthTransactions.value = monthTx
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error fetching modal budget data:', err)
+    toast.error('Error al cargar datos auxiliares', {
+      description: err?.message || 'No se pudieron sincronizar las categorías y cuentas'
+    })
   } finally {
     loadingBudget.value = false
   }
@@ -157,22 +161,34 @@ const onSubmit = handleSubmit(async (formValues) => {
         category_id: formValues.category!,
         account_id: accountId,
       })
+      toast.success('Transacción actualizada correctamente')
     } else {
-      const { data: { user } } = await supabase.auth.getUser()
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      if (authError || !user) {
+        toast.error('Error de autenticación', {
+          description: 'Debes iniciar sesión para registrar una transacción'
+        })
+        return
+      }
+
       await transactionsService.create({
         amount: formValues.amount!,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
-        user_id: user!.id,
+        user_id: user.id,
       })
+      toast.success('Transacción registrada correctamente')
     }
 
     resetForm()
     hide()
     emit('reload')
-  } catch (err) {
-    console.error(err)
+  } catch (err: any) {
+    console.error('Error saving transaction:', err)
+    toast.error('Error al guardar la transacción', {
+      description: err?.message || 'Ocurrió un error inesperado al procesar la transacción'
+    })
   }
 })
 </script>

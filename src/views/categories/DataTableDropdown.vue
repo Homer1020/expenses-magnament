@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import * as categoriesService from '@/services/categories'
 import type { TransactionCategory } from '@/types'
 import { MoreHorizontal } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 defineProps<{
   category: TransactionCategory
@@ -14,9 +15,13 @@ const emit = defineEmits(['edit', 'delete'])
 const deleteCategory = async (id: number) => {
   try {
     await categoriesService.remove(id)
+    toast.success('Categoría eliminada correctamente')
     emit('delete')
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error deleting category:', err)
+    toast.error('Error al eliminar la categoría', {
+      description: err?.message || 'Ocurrió un error inesperado al intentar eliminar la categoría'
+    })
   }
 }
 </script>

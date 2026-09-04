@@ -4,6 +4,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import * as transactionsService from '@/services/transactions'
 import type { Transaction } from '@/types'
 import { MoreHorizontal } from 'lucide-vue-next'
+import { toast } from 'vue-sonner'
 
 defineProps<{
   transaction: Transaction
@@ -14,9 +15,13 @@ const emit = defineEmits(['edit', 'delete'])
 const deleteTransaction = async (id: number) => {
   try {
     await transactionsService.remove(id)
+    toast.success('Transacción eliminada correctamente')
     emit('delete')
-  } catch (err) {
+  } catch (err: any) {
     console.error('Error deleting transaction:', err)
+    toast.error('Error al eliminar la transacción', {
+      description: err?.message || 'Ocurrió un error inesperado al intentar eliminar la transacción'
+    })
   }
 }
 </script>

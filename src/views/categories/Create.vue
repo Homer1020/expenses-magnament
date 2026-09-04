@@ -25,6 +25,7 @@ import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { computed, watch } from 'vue'
 import * as z from 'zod'
+import { toast } from 'vue-sonner'
 
 const emit = defineEmits(['reload'])
 
@@ -60,15 +61,20 @@ const onSubmit = handleSubmit(async (values) => {
   try {
     if (isEditing.value && category) {
       await categoriesService.update(category.id, values)
+      toast.success('Categoría actualizada correctamente')
     } else {
       await categoriesService.create(values)
+      toast.success('Categoría creada correctamente')
     }
 
     resetForm()
     hide()
     emit('reload')
-  } catch (err) {
+  } catch (err: any) {
     console.error(err)
+    toast.error('Error al guardar la categoría', {
+      description: err?.message || 'Ocurrió un error inesperado al guardar la categoría'
+    })
   }
 })
 </script>

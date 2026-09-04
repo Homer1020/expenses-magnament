@@ -8,6 +8,7 @@ import Button from '@/components/ui/button/Button.vue'
 import Create from './Create.vue'
 import { CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
+import { toast } from 'vue-sonner'
 
 const transactions = ref<Transaction[]>([])
 const loading = ref(true)
@@ -31,9 +32,12 @@ onMounted(async () => {
   try {
     loading.value = true
     await fetchTransactions()
-  } catch (err) {
+  } catch (err: any) {
     error.value = err as PostgrestError
     console.error('Error fetching transactions:', err)
+    toast.error('Error al cargar transacciones', {
+      description: err?.message || 'No se pudieron sincronizar las transacciones'
+    })
   } finally {
     loading.value = false
   }
@@ -58,9 +62,16 @@ const openEdit = (transaction: Transaction) => {
 }
 
 const updateFilters = async (dateRange: DateRange) => {
-  dateFilters.value.start = dateRange.start
-  dateFilters.value.end = dateRange.end
-  await fetchTransactions()
+  try {
+    dateFilters.value.start = dateRange.start
+    dateFilters.value.end = dateRange.end
+    await fetchTransactions()
+  } catch (err: any) {
+    console.error('Error filtering transactions:', err)
+    toast.error('Error al filtrar transacciones', {
+      description: err?.message || 'No se pudieron aplicar los filtros de fecha'
+    })
+  }
 }
 </script>
 
