@@ -16,7 +16,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { ChevronsUpDown, User as UserIcon, LogOut } from 'lucide-vue-next'
+import { ChevronsUpDown, User as UserIcon } from 'lucide-vue-next'
 
 defineProps<{
   versions?: string[]
