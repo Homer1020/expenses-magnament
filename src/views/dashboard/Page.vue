@@ -590,7 +590,7 @@ const monthlySeries = computed(() => {
     </div>
 
     <!-- FILTER TOOLBAR -->
-    <Card class="border shadow-xs bg-card/60 backdrop-blur-xs">
+    <Card class="border shadow-xs bg-card/60 backdrop-blur-xs p-0">
       <CardContent class="p-3">
         <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-3">
           <!-- Preset Buttons -->

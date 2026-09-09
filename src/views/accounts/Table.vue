@@ -8,7 +8,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import type { Account } from '@/types'
-import { columns, type AccountWithMetrics } from './columns'
+import { columns, type AccountWithMetrics, type PeriodView } from './columns'
 import {
   FlexRender,
   getCoreRowModel,
@@ -21,7 +21,7 @@ import Button from '@/components/ui/button/Button.vue'
 import { ref } from 'vue'
 import { Input } from '@/components/ui/input'
 
-const { accounts } = defineProps<{ accounts: AccountWithMetrics[] }>()
+const { accounts, periodView } = defineProps<{ accounts: AccountWithMetrics[]; periodView: PeriodView }>()
 
 const emit = defineEmits<{
   (e: 'edit', account: Account): void
@@ -33,7 +33,7 @@ const globalFilter = ref('')
 
 const table = useVueTable({
   get data() { return accounts },
-  get columns() { return columns(emit) },
+  get columns() { return columns(emit, periodView) },
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   getFilteredRowModel: getFilteredRowModel(),

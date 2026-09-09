@@ -12,12 +12,14 @@ export interface AccountWithMetrics extends Account {
   fundBalance: number
 }
 
+export type PeriodView = 'month' | 'accumulated'
+
 interface TableEmits {
   (e: 'edit', account: Account): void
   (e: 'delete'): void
 }
 
-export const columns = (emit: TableEmits): ColumnDef<AccountWithMetrics>[] => [
+export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<AccountWithMetrics>[] => [
   {
     accessorKey: 'name',
     header: 'Nombre del Presupuesto',
@@ -41,7 +43,7 @@ export const columns = (emit: TableEmits): ColumnDef<AccountWithMetrics>[] => [
   },
   {
     accessorKey: 'allocatedBudget',
-    header: 'Presupuesto Mes',
+    header: periodView === 'month' ? 'Presupuesto Mes' : 'Presupuesto Acumulado',
     cell: ({ row }) => {
       const budget = row.original.allocatedBudget || 0
       return h('div', { class: 'font-medium' }, formatCurrency(budget))
@@ -49,7 +51,7 @@ export const columns = (emit: TableEmits): ColumnDef<AccountWithMetrics>[] => [
   },
   {
     accessorKey: 'spent',
-    header: 'Gastado este Mes',
+    header: periodView === 'month' ? 'Gastado este Mes' : 'Gastado Acumulado',
     cell: ({ row }) => {
       const spent = row.original.spent || 0
       return h('div', { class: 'text-rose-500 font-medium' }, formatCurrency(spent))

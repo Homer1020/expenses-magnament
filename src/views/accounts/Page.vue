@@ -4,11 +4,17 @@ import type { Account, Transaction } from '@/types'
 import type { PostgrestError } from '@supabase/supabase-js'
 import * as accountsService from '@/services/accounts'
 import * as transactionsService from '@/services/transactions'
-import { type AccountWithMetrics } from './columns'
+import { type AccountWithMetrics, type PeriodView } from './columns'
 import Table from './Table.vue'
 import Button from '@/components/ui/button/Button.vue'
 import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
+import Select from '@/components/ui/select/Select.vue'
+import SelectContent from '@/components/ui/select/SelectContent.vue'
+import SelectGroup from '@/components/ui/select/SelectGroup.vue'
+import SelectItem from '@/components/ui/select/SelectItem.vue'
+import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
+import SelectValue from '@/components/ui/select/SelectValue.vue'
 import { formatCurrency } from '@/lib/formatters'
 import { Wallet, TrendingDown, PiggyBank, Sparkles } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
@@ -49,18 +55,25 @@ onMounted(async () => {
   }
 })
 
+// Period filter: 'month' shows current-month figures, 'accumulated' shows all-time figures
+const periodView = ref<PeriodView>('month')
+
+const periodTransactions = computed(() => {
+  return periodView.value === 'month' ? currentMonthTransactions.value : allTransactions.value
+})
+
 // Metrics calculations
-const monthlyIncome = computed(() => {
-  return currentMonthTransactions.value
+const periodIncome = computed(() => {
+  return periodTransactions.value
     .filter((t) => t.categories?.type === 1)
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 })
 
 const accountsWithMetrics = computed<AccountWithMetrics[]>(() => {
-  const income = monthlyIncome.value
+  const income = periodIncome.value
   return accounts.value.map((acc) => {
     const allocatedBudget = (income * (acc.percentage || 0)) / 100
-    const spent = currentMonthTransactions.value
+    const spent = periodTransactions.value
       .filter((t) => t.account_id === acc.id && t.categories?.type !== 1)
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
     const available = allocatedBudget - spent
@@ -129,10 +142,23 @@ const openEdit = (account: Account) => {
           Distribución porcentual de tus ingresos mensuales y saldos disponibles en tiempo real.
         </p>
       </div>
-      <Button @click="openCreate" class="gap-1.5 shadow-sm">
-        <Sparkles class="h-4 w-4" />
-        Nuevo Presupuesto
-      </Button>
+      <div class="flex items-center gap-2">
+        <Select v-model="periodView">
+          <SelectTrigger class="w-[150px]">
+            <SelectValue placeholder="Periodo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="month">Mes Actual</SelectItem>
+              <SelectItem value="accumulated">Acumulado</SelectItem>
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+        <Button @click="openCreate" class="gap-1.5 shadow-sm">
+          <Sparkles class="h-4 w-4" />
+          Nuevo Presupuesto
+        </Button>
+      </div>
     </div>
 
     <!-- Summary Metrics Cards -->
@@ -140,8 +166,10 @@ const openEdit = (account: Account) => {
       <Card class="border shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
-            <p class="text-xs font-medium text-muted-foreground">Ingresos del Mes</p>
-            <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(monthlyIncome) }}</h3>
+            <p class="text-xs font-medium text-muted-foreground">
+              {{ periodView === 'month' ? 'Ingresos del Mes' : 'Ingresos Acumulados' }}
+            </p>
+            <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(periodIncome) }}</h3>
           </div>
           <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <PiggyBank class="h-5 w-5" />
@@ -152,7 +180,9 @@ const openEdit = (account: Account) => {
       <Card class="border shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
-            <p class="text-xs font-medium text-muted-foreground">Total Presupuestado</p>
+            <p class="text-xs font-medium text-muted-foreground">
+              Total Presupuestado <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
+            </p>
             <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(totalAllocated) }}</h3>
             <span
               class="text-[11px] font-medium"
@@ -170,7 +200,9 @@ const openEdit = (account: Account) => {
       <Card class="border shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
-            <p class="text-xs font-medium text-muted-foreground">Gastado desde Presupuestos</p>
+            <p class="text-xs font-medium text-muted-foreground">
+              Gastado desde Presupuestos <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
+            </p>
             <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ formatCurrency(totalSpent) }}</h3>
           </div>
           <div class="p-2.5 rounded-full bg-rose-500/10 text-rose-500">
@@ -182,7 +214,9 @@ const openEdit = (account: Account) => {
       <Card class="border shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
-            <p class="text-xs font-medium text-muted-foreground">Saldo Disponible Total</p>
+            <p class="text-xs font-medium text-muted-foreground">
+              Saldo Disponible Total <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
+            </p>
             <h3
               class="text-lg font-bold mt-0.5"
               :class="totalAvailable >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
@@ -220,6 +254,7 @@ const openEdit = (account: Account) => {
     <div v-else>
       <Table
         :accounts="accountsWithMetrics"
+        :period-view="periodView"
         @edit="openEdit"
         @delete="fetchData"
       />
