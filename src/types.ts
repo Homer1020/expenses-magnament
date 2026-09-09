@@ -2,7 +2,8 @@
 export interface TransactionCategory {
   id: number,
   name: string,
-  type: number
+  type: number,
+  user_id?: string
 }
 
 export interface Transaction {

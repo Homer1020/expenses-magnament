@@ -30,7 +30,6 @@ const data = {
         {
           title: 'Panel',
           url: '/',
-          isActive: true,
         },
         {
           title: 'Transacciones',

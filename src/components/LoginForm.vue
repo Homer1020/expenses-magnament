@@ -94,9 +94,9 @@ const handleLogin = async () => {
             </div>
             <div class="mt-4 text-center text-sm">
               Don't have an account?
-              <a href="#" class="underline underline-offset-4">
+              <RouterLink to="/signup" class="underline underline-offset-4">
                 Sign up
-              </a>
+              </RouterLink>
             </div>
           </form>
         </CardContent>

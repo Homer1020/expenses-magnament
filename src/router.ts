@@ -4,8 +4,10 @@ import Transactions from './views/transactions/Page.vue'
 import Categories from './views/categories/Page.vue'
 import Dashboard from './views/dashboard/Page.vue'
 import Accounts from './views/accounts/Page.vue'
+import Profile from './views/profile/Page.vue'
 import DashboardLayout from './views/dashboard/Layout.vue'
 import Login from './views/auth/Login.vue'
+import Signup from './views/auth/Signup.vue'
 import supabase from './lib/supabase'
 
 declare module 'vue-router' {
@@ -18,7 +20,7 @@ declare module 'vue-router' {
 }
 
 export const routes = [
-  
+
   {
     path: '/',
     component: DashboardLayout,
@@ -65,12 +67,26 @@ export const routes = [
           ]
         }
       },
+      {
+        path: 'profile',
+        component: Profile,
+        meta: {
+          breadcrumb: [
+            { title: 'Dashboard', href: '/' },
+            { title: 'Mi Perfil' }
+          ]
+        }
+      },
     ]
   },
   {
     path: '/login',
     component: Login
   },
+  {
+    path: '/signup',
+    component: Signup
+  }
 ]
 
 const router = createRouter({

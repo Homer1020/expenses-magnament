@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import type { User } from '@supabase/supabase-js'
+import { RouterLink } from 'vue-router'
 import supabase from '@/lib/supabase'
 import { signOut } from '@/services/auth'
 import {
@@ -16,7 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { ChevronsUpDown, User as UserIcon } from 'lucide-vue-next'
+import { ChevronsUpDown, User as UserIcon, LogOut } from 'lucide-vue-next'
 
 defineProps<{
   versions?: string[]
@@ -42,17 +43,17 @@ onMounted(async () => {
         <DropdownMenuTrigger as-child>
           <SidebarMenuButton
             size="lg"
-            class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground cursor-pointer"
           >
             <!-- Avatar / Icono -->
-            <div class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-              <UserIcon class="size-4" />
+            <div class="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg font-semibold text-xs">
+              {{ (user?.user_metadata?.display_name || user?.user_metadata?.full_name || user?.email || 'U').slice(0, 2).toUpperCase() }}
             </div>
 
             <!-- Datos del Usuario -->
             <div class="grid flex-1 text-left text-sm leading-tight">
               <span class="truncate font-semibold">
-                Expenses Management
+                {{ user?.user_metadata?.display_name || user?.user_metadata?.full_name || 'Expenses Management' }}
               </span>
               <span class="truncate text-xs text-muted-foreground">
                 {{ user?.email || 'Cargando...' }}
@@ -70,10 +71,10 @@ onMounted(async () => {
           :side-offset="4"
         >
           <DropdownMenuLabel class="p-0 font-normal">
-            <div class="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
+            <div class="flex items-center gap-2 px-2 py-1.5 text-left text-sm">
               <div class="grid flex-1 text-left text-sm leading-tight">
                 <span class="truncate font-semibold">
-                  {{ user?.user_metadata?.full_name || 'Mi Cuenta' }}
+                  {{ user?.user_metadata?.display_name || user?.user_metadata?.full_name || 'Mi Cuenta' }}
                 </span>
                 <span class="truncate text-xs text-muted-foreground">
                   {{ user?.email }}
@@ -84,16 +85,18 @@ onMounted(async () => {
 
           <DropdownMenuSeparator />
 
-          <!-- <DropdownMenuItem
-            v-for="version in versions"
-            :key="version"
-            @select="selectedVersion = version"
-          >
-            v{{ version }}
-            <Check v-if="version === selectedVersion" class="ml-auto" />
-          </DropdownMenuItem> -->
-          <DropdownMenuItem @click="signOut">
-            Cerrar Session
+          <DropdownMenuItem as-child class="cursor-pointer">
+            <RouterLink to="/profile" class="flex items-center gap-2 w-full">
+              <UserIcon class="size-4" />
+              <span>Mi Perfil</span>
+            </RouterLink>
+          </DropdownMenuItem>
+
+          <DropdownMenuSeparator />
+
+          <DropdownMenuItem @click="signOut" class="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2">
+            <LogOut class="size-4" />
+            <span>Cerrar Sesión</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
