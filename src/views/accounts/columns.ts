@@ -9,6 +9,7 @@ export interface AccountWithMetrics extends Account {
   spent: number
   available: number
   spentRatio: number
+  fundBalance: number
 }
 
 interface TableEmits {
@@ -19,7 +20,7 @@ interface TableEmits {
 export const columns = (emit: TableEmits): ColumnDef<AccountWithMetrics>[] => [
   {
     accessorKey: 'name',
-    header: 'Nombre de Cuenta',
+    header: 'Nombre del Presupuesto',
     cell: ({ row }) => {
       return h('div', { class: 'font-medium text-foreground' }, row.getValue('name'))
     },
@@ -68,6 +69,23 @@ export const columns = (emit: TableEmits): ColumnDef<AccountWithMetrics>[] => [
           }`,
         },
         formatCurrency(available)
+      )
+    },
+  },
+  {
+    accessorKey: 'fundBalance',
+    header: 'Saldo del Fondo',
+    cell: ({ row }) => {
+      const fundBalance = row.original.fundBalance || 0
+      const isPositive = fundBalance >= 0
+      return h(
+        'div',
+        {
+          class: `font-bold ${
+            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+          }`,
+        },
+        formatCurrency(fundBalance)
       )
     },
   },

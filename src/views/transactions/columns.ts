@@ -43,7 +43,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
   },
   {
     accessorKey: 'account',
-    header: 'Cuenta',
+    header: 'Presupuesto',
     cell: ({ row }) => {
       const account = row.original.accounts
       if (!account) {

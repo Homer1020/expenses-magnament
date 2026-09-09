@@ -40,7 +40,7 @@ const data = {
           url: '/categories',
         },
         {
-          title: 'Cuentas',
+          title: 'Presupuestos',
           url: '/accounts',
         },
       ],

@@ -43,7 +43,7 @@ export const routes = [
         meta: {
           breadcrumb: [
             { title: 'Dashboard', href: '/' },
-            { title: 'Cuentas' }
+            { title: 'Presupuestos' }
           ]
         }
       },

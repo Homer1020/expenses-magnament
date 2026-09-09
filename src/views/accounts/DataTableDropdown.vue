@@ -21,12 +21,12 @@ const emit = defineEmits(['edit', 'delete'])
 const deleteAccount = async (id: number) => {
   try {
     await accountsService.remove(id)
-    toast.success('Cuenta eliminada correctamente')
+    toast.success('Presupuesto eliminado correctamente')
     emit('delete')
   } catch (err: any) {
     console.error('Error deleting account:', err)
-    toast.error('Error al eliminar la cuenta', {
-      description: err?.message || 'Ocurrió un error inesperado al intentar eliminar la cuenta'
+    toast.error('Error al eliminar el presupuesto', {
+      description: err?.message || 'Ocurrió un error inesperado al intentar eliminar el presupuesto'
     })
   }
 }

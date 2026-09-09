@@ -28,7 +28,7 @@ import type { Transaction, TransactionCategory, Account } from '@/types'
 import { formatCurrency } from '@/lib/formatters'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import * as z from 'zod'
 import { Wallet, AlertCircle, TrendingDown } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
@@ -46,13 +46,15 @@ const isEditing = computed(() => !!transaction)
 const formSchema = toTypedSchema(z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   description: z.string().max(100).optional(),
+  type: z.number({ required_error: 'Selecciona un tipo' }),
   category: z.number({ required_error: 'Selecciona una categoría' }),
   account: z.number().nullable().optional(),
 }))
 
-const { handleSubmit, isFieldDirty, resetForm, setValues, values } = useForm<{
+const { handleSubmit, isFieldDirty, resetForm, setFieldValue, setValues, values } = useForm<{
   amount?: number
   description?: string
+  type?: number
   category?: number
   account?: number | null
 }>({
@@ -62,16 +64,17 @@ const { handleSubmit, isFieldDirty, resetForm, setValues, values } = useForm<{
 
 const categories = ref<TransactionCategory[]>([])
 const accounts = ref<Account[]>([])
+const allTransactions = ref<Transaction[]>([])
 const currentMonthTransactions = ref<Transaction[]>([])
 const loadingBudget = ref(false)
+const isSyncingForm = ref(false)
 
-const selectedCategory = computed(() => {
-  if (!values.category) return null
-  return categories.value.find((c) => c.id === values.category) || null
+const filteredCategories = computed(() => {
+  return categories.value.filter((c) => c.type === values.type)
 })
 
-const isExpenseCategory = computed(() => {
-  return selectedCategory.value?.type === 0
+const showAccountField = computed(() => {
+  return values.type !== undefined && accounts.value.length > 0
 })
 
 // Calculate monthly income and account live calculations
@@ -86,6 +89,24 @@ const selectedAccountData = computed(() => {
   const acc = accounts.value.find((a) => a.id === values.account)
   if (!acc) return null
 
+  const currentAmount = Number(values.amount) || 0
+
+  if (values.type === 1) {
+    // Ingreso: saldo acumulado histórico del fondo (ingresos - egresos asignados)
+    const currentBalance = allTransactions.value
+      .filter((t) => t.account_id === acc.id && (transaction ? t.id !== transaction.id : true))
+      .reduce((sum, t) => sum + (t.categories?.type === 1 ? Number(t.amount) || 0 : -(Number(t.amount) || 0)), 0)
+    const projectedBalance = currentBalance + currentAmount
+
+    return {
+      ...acc,
+      mode: 'income' as const,
+      currentBalance,
+      currentAmount,
+      projectedBalance,
+    }
+  }
+
   const allocatedBudget = (monthlyIncome.value * (acc.percentage || 0)) / 100
   // Sum expenses for this account this month, excluding current editing transaction
   const spentSoFar = currentMonthTransactions.value
@@ -93,11 +114,11 @@ const selectedAccountData = computed(() => {
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
   const availableBefore = allocatedBudget - spentSoFar
-  const currentAmount = Number(values.amount) || 0
   const projectedRemaining = availableBefore - currentAmount
 
   return {
     ...acc,
+    mode: 'expense' as const,
     allocatedBudget,
     spentSoFar,
     availableBefore,
@@ -114,19 +135,20 @@ const fetchBudgetData = async () => {
     const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString()
     const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1)).toISOString()
 
-    const [cats, accs, monthTx] = await Promise.all([
+    const [cats, accs, allTx] = await Promise.all([
       categoriesService.getAll(),
       accountsService.getAll(),
-      transactionsService.getAll({ startISO: startOfMonth, endISO: endOfMonth }),
+      transactionsService.getAll(),
     ])
 
     categories.value = cats
     accounts.value = accs
-    currentMonthTransactions.value = monthTx
+    allTransactions.value = allTx
+    currentMonthTransactions.value = allTx.filter((t) => t.date >= startOfMonth && t.date < endOfMonth)
   } catch (err: any) {
     console.error('Error fetching modal budget data:', err)
     toast.error('Error al cargar datos auxiliares', {
-      description: err?.message || 'No se pudieron sincronizar las categorías y cuentas'
+      description: err?.message || 'No se pudieron sincronizar las categorías y presupuestos'
     })
   } finally {
     loadingBudget.value = false
@@ -138,15 +160,27 @@ watch(() => open, async (isOpen) => {
 
   await fetchBudgetData()
 
+  isSyncingForm.value = true
   if (transaction) {
     setValues({
+      type: transaction.categories?.type,
       category: transaction.category_id,
       account: transaction.account_id ?? null,
       amount: transaction.amount,
       description: transaction.description ?? '',
     })
   } else {
-    resetForm({ values: { category: undefined, account: null, amount: undefined, description: '' } })
+    resetForm({ values: { type: undefined, category: undefined, account: null, amount: undefined, description: '' } })
+  }
+  await nextTick()
+  isSyncingForm.value = false
+})
+
+watch(() => values.type, (newType, oldType) => {
+  if (isSyncingForm.value || oldType === undefined) return
+  if (newType !== oldType) {
+    setFieldValue('category', undefined)
+    setFieldValue('account', null)
   }
 })
 
@@ -200,29 +234,45 @@ const onSubmit = handleSubmit(async (formValues) => {
         <DialogTitle>{{ isEditing ? 'Editar Transacción' : 'Agregar Transacción' }}</DialogTitle>
       </DialogHeader>
       <form @submit="onSubmit" id="transaction-form" class="space-y-3.5">
+        <!-- Tipo -->
+        <FormField v-slot="{ componentField }" name="type" :validate-on-blur="!isFieldDirty">
+          <FormItem>
+            <FormLabel>Tipo</FormLabel>
+            <Select v-bind="componentField">
+              <FormControl class="w-full">
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona un tipo" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem :value="1">Ingreso</SelectItem>
+                  <SelectItem :value="0">Egreso</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <FormMessage />
+          </FormItem>
+        </FormField>
+
         <!-- Categoría -->
         <FormField v-slot="{ componentField }" name="category" :validate-on-blur="!isFieldDirty">
           <FormItem>
             <FormLabel>Categoría</FormLabel>
-            <Select v-bind="componentField">
+            <Select v-bind="componentField" :disabled="values.type === undefined">
               <FormControl class="w-full">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
+                  <SelectValue :placeholder="values.type === undefined ? 'Primero selecciona un tipo' : 'Selecciona una categoría'" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem
-                    v-for="category in categories"
+                    v-for="category in filteredCategories"
                     :key="category.id"
                     :value="category.id"
                   >
-                    <div class="flex items-center justify-between w-full gap-2">
-                      <span>{{ category.name }}</span>
-                      <span class="text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded" :class="category.type === 1 ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-500/10 text-rose-500'">
-                        {{ category.type === 1 ? 'Ingreso' : 'Egreso' }}
-                      </span>
-                    </div>
+                    {{ category.name }}
                   </SelectItem>
                 </SelectGroup>
               </SelectContent>
@@ -231,23 +281,23 @@ const onSubmit = handleSubmit(async (formValues) => {
           </FormItem>
         </FormField>
 
-        <!-- Cuenta (Visible para gastos / egresos o si hay cuentas configuradas) -->
-        <FormField v-if="isExpenseCategory && accounts.length > 0" v-slot="{ componentField }" name="account">
+        <!-- Presupuesto / Fondo (visible para Ingreso o Egreso si hay presupuestos configurados) -->
+        <FormField v-if="showAccountField" v-slot="{ componentField }" name="account">
           <FormItem>
             <div class="flex items-center justify-between">
-              <FormLabel>Cuenta / Fondo Asignado</FormLabel>
+              <FormLabel>Presupuesto / Fondo Asignado</FormLabel>
               <span class="text-xs text-muted-foreground font-normal">Opcional</span>
             </div>
             <Select v-bind="componentField">
               <FormControl class="w-full">
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona la cuenta de donde se debita" />
+                  <SelectValue :placeholder="values.type === 1 ? 'Selecciona el fondo al que se abona' : 'Selecciona el presupuesto de donde se debita'" />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
                 <SelectGroup>
                   <SelectItem :value="null">
-                    <span class="text-muted-foreground">Sin asignar a cuenta</span>
+                    <span class="text-muted-foreground">Sin asignar a presupuesto</span>
                   </SelectItem>
                   <SelectItem
                     v-for="account in accounts"
@@ -266,8 +316,8 @@ const onSubmit = handleSubmit(async (formValues) => {
           </FormItem>
         </FormField>
 
-        <!-- Live Budget Card when Account is Selected -->
-        <div v-if="selectedAccountData" class="p-3.5 rounded-lg border bg-accent/30 space-y-2.5 transition-all text-xs">
+        <!-- Live Budget Card when Account is Selected (Egreso) -->
+        <div v-if="selectedAccountData?.mode === 'expense'" class="p-3.5 rounded-lg border bg-accent/30 space-y-2.5 transition-all text-xs">
           <div class="flex items-center justify-between">
             <span class="font-medium text-muted-foreground flex items-center gap-1.5">
               <Wallet class="h-3.5 w-3.5 text-primary" />
@@ -285,7 +335,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div class="flex items-center justify-between pt-1.5 border-t">
-            <span class="font-medium">Disponible actual en cuenta:</span>
+            <span class="font-medium">Disponible actual en presupuesto:</span>
             <span
               class="font-bold text-sm"
               :class="selectedAccountData.availableBefore >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
@@ -312,6 +362,24 @@ const onSubmit = handleSubmit(async (formValues) => {
           >
             <AlertCircle class="h-4 w-4 shrink-0 mt-0.5" />
             <span>Este gasto sobrepasa el saldo presupuestado disponible por {{ formatCurrency(Math.abs(selectedAccountData.projectedRemaining)) }}.</span>
+          </div>
+        </div>
+
+        <!-- Live Fund Balance Card when Account is Selected (Ingreso) -->
+        <div v-if="selectedAccountData?.mode === 'income'" class="p-3.5 rounded-lg border bg-accent/30 space-y-2.5 transition-all text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-medium text-muted-foreground flex items-center gap-1.5">
+              <Wallet class="h-3.5 w-3.5 text-primary" />
+              Saldo actual del fondo:
+            </span>
+            <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.currentBalance) }}</span>
+          </div>
+
+          <div v-if="selectedAccountData.currentAmount > 0" class="flex items-center justify-between pt-1.5 border-t border-dashed">
+            <span class="text-muted-foreground">Saldo proyectado tras este ingreso:</span>
+            <span class="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+              {{ formatCurrency(selectedAccountData.projectedBalance) }}
+            </span>
           </div>
         </div>
 

@@ -254,12 +254,16 @@ const accountsDistribution = computed(() => {
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
     const available = allocatedBudget - spent
     const spentRatio = allocatedBudget > 0 ? (spent / allocatedBudget) * 100 : 0
+    const fundBalance = allTimeTransactions.value
+      .filter((t) => t.account_id === acc.id)
+      .reduce((sum, t) => sum + (t.categories?.type === 1 ? Number(t.amount) || 0 : -(Number(t.amount) || 0)), 0)
     return {
       ...acc,
       allocatedBudget,
       spent,
       available,
       spentRatio,
+      fundBalance,
     }
   })
 })
@@ -559,7 +563,7 @@ const monthlySeries = computed(() => {
           </span>
         </div>
         <p class="text-sm text-muted-foreground mt-0.5">
-          Monitorea tus ingresos, gastos, distribución de cuentas y patrones de ahorro.
+          Monitorea tus ingresos, gastos, distribución de presupuestos y patrones de ahorro.
         </p>
       </div>
 
@@ -819,7 +823,7 @@ const monthlySeries = computed(() => {
         <Card class="lg:col-span-3 border shadow-xs">
           <CardHeader class="flex flex-row items-center justify-between pb-2">
             <div>
-              <CardTitle class="text-base font-semibold">Distribución por Cuentas</CardTitle>
+              <CardTitle class="text-base font-semibold">Distribución por Presupuestos</CardTitle>
               <CardDescription>Presupuesto ideal según ingresos del periodo</CardDescription>
             </div>
             <Button as-child variant="ghost" size="sm" class="h-8 gap-1 text-xs">
@@ -832,10 +836,10 @@ const monthlySeries = computed(() => {
           <CardContent class="space-y-4">
             <div v-if="accounts.length === 0" class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Layers class="h-8 w-8 opacity-30 mb-2" />
-              <p class="text-sm font-medium">No has creado cuentas aún</p>
+              <p class="text-sm font-medium">No has creado presupuestos aún</p>
               <p class="text-xs opacity-75 mb-3">Define porcentajes para tus ahorros y gastos (ej. 50/30/20)</p>
               <Button as-child size="sm" variant="outline">
-                <RouterLink to="/accounts">Crear Cuentas</RouterLink>
+                <RouterLink to="/accounts">Crear Presupuestos</RouterLink>
               </Button>
             </div>
             <div v-else class="space-y-3.5">
@@ -887,6 +891,16 @@ const monthlySeries = computed(() => {
                       {{ formatCurrency(acc.available) }}
                     </span>
                   </div>
+                </div>
+
+                <div class="flex items-center justify-between pt-1.5 border-t border-dashed text-[11px]">
+                  <span class="text-muted-foreground">Fondo acumulado:</span>
+                  <span
+                    class="font-bold"
+                    :class="acc.fundBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+                  >
+                    {{ formatCurrency(acc.fundBalance) }}
+                  </span>
                 </div>
               </div>
 

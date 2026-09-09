@@ -14,6 +14,7 @@ import { Wallet, TrendingDown, PiggyBank, Sparkles } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 const accounts = ref<Account[]>([])
+const allTransactions = ref<Transaction[]>([])
 const currentMonthTransactions = ref<Transaction[]>([])
 const loading = ref(true)
 const error = ref<PostgrestError | null>(null)
@@ -23,13 +24,14 @@ const fetchData = async () => {
   const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString()
   const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1)).toISOString()
 
-  const [accs, monthTx] = await Promise.all([
+  const [accs, allTx] = await Promise.all([
     accountsService.getAll(),
-    transactionsService.getAll({ startISO: startOfMonth, endISO: endOfMonth }),
+    transactionsService.getAll(),
   ])
 
   accounts.value = accs
-  currentMonthTransactions.value = monthTx
+  allTransactions.value = allTx
+  currentMonthTransactions.value = allTx.filter((t) => t.date >= startOfMonth && t.date < endOfMonth)
 }
 
 onMounted(async () => {
@@ -39,8 +41,8 @@ onMounted(async () => {
   } catch (err: any) {
     error.value = err as PostgrestError
     console.error('Error fetching accounts data:', err)
-    toast.error('Error al cargar cuentas', {
-      description: err?.message || 'No se pudieron sincronizar los datos de cuentas'
+    toast.error('Error al cargar presupuestos', {
+      description: err?.message || 'No se pudieron sincronizar los datos de presupuestos'
     })
   } finally {
     loading.value = false
@@ -64,14 +66,23 @@ const accountsWithMetrics = computed<AccountWithMetrics[]>(() => {
     const available = allocatedBudget - spent
     const spentRatio = allocatedBudget > 0 ? (spent / allocatedBudget) * 100 : 0
 
+    const fundBalance = allTransactions.value
+      .filter((t) => t.account_id === acc.id)
+      .reduce((sum, t) => sum + (t.categories?.type === 1 ? Number(t.amount) || 0 : -(Number(t.amount) || 0)), 0)
+
     return {
       ...acc,
       allocatedBudget,
       spent,
       available,
       spentRatio,
+      fundBalance,
     }
   })
+})
+
+const totalFundBalance = computed(() => {
+  return accountsWithMetrics.value.reduce((sum, a) => sum + a.fundBalance, 0)
 })
 
 const totalAllocated = computed(() => {
@@ -113,19 +124,19 @@ const openEdit = (account: Account) => {
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-xl font-bold tracking-tight">Cuentas y Presupuesto Mensual</h1>
+        <h1 class="text-xl font-bold tracking-tight">Presupuestos Mensuales</h1>
         <p class="text-xs text-muted-foreground mt-0.5">
           Distribución porcentual de tus ingresos mensuales y saldos disponibles en tiempo real.
         </p>
       </div>
       <Button @click="openCreate" class="gap-1.5 shadow-sm">
         <Sparkles class="h-4 w-4" />
-        Nueva Cuenta
+        Nuevo Presupuesto
       </Button>
     </div>
 
     <!-- Summary Metrics Cards -->
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <Card class="border shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
@@ -159,7 +170,7 @@ const openEdit = (account: Account) => {
       <Card class="border shadow-xs">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
-            <p class="text-xs font-medium text-muted-foreground">Gastado desde Cuentas</p>
+            <p class="text-xs font-medium text-muted-foreground">Gastado desde Presupuestos</p>
             <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ formatCurrency(totalSpent) }}</h3>
           </div>
           <div class="p-2.5 rounded-full bg-rose-500/10 text-rose-500">
@@ -184,10 +195,27 @@ const openEdit = (account: Account) => {
           </div>
         </CardContent>
       </Card>
+
+      <Card class="border shadow-xs">
+        <CardContent class="p-4 flex items-center justify-between">
+          <div>
+            <p class="text-xs font-medium text-muted-foreground">Total en Fondos</p>
+            <h3
+              class="text-lg font-bold mt-0.5"
+              :class="totalFundBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+            >
+              {{ formatCurrency(totalFundBalance) }}
+            </h3>
+          </div>
+          <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <PiggyBank class="h-5 w-5" />
+          </div>
+        </CardContent>
+      </Card>
     </div>
 
     <!-- Table -->
-    <div v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Cargando cuentas...</div>
+    <div v-if="loading" class="text-sm text-muted-foreground py-8 text-center">Cargando presupuestos...</div>
     <div v-else-if="error" class="text-sm text-destructive py-4">Error: {{ error.message }}</div>
     <div v-else>
       <Table

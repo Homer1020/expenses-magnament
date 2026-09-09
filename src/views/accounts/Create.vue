@@ -65,24 +65,24 @@ const onSubmit = handleSubmit(async (values) => {
     
     if (totalPercentage + values.percentage > 100) {
       toast.error('Error', {
-        description: 'El porcentaje total de todas las cuentas no puede exceder el 100%'
+        description: 'El porcentaje total de todos los presupuestos no puede exceder el 100%'
       })
       return
     }
 
     if (isEditing.value && account) {
       await accountsService.update(account.id, values)
-      toast.success('Cuenta actualizada correctamente')
+      toast.success('Presupuesto actualizado correctamente')
     } else {
       await accountsService.create(values)
-      toast.success('Cuenta creada correctamente')
+      toast.success('Presupuesto creado correctamente')
     }
 
     resetForm()
     hide()
     emit('reload')
   } catch (err: any) {
-    toast.error('Error al guardar la cuenta', {
+    toast.error('Error al guardar el presupuesto', {
       description: err?.message || 'Ocurrió un error inesperado'
     })
   }
@@ -93,14 +93,14 @@ const onSubmit = handleSubmit(async (values) => {
   <Dialog :open="open" @update:open="!$event && hide()">
     <DialogContent>
       <DialogHeader>
-        <DialogTitle>{{ isEditing ? 'Editar Cuenta' : 'Agregar Cuenta' }}</DialogTitle>
+        <DialogTitle>{{ isEditing ? 'Editar Presupuesto' : 'Agregar Presupuesto' }}</DialogTitle>
       </DialogHeader>
       <form @submit="onSubmit" id="account-form">
         <FormField v-slot="{ componentField }" name="name" :validate-on-blur="!isFieldDirty">
           <FormItem class="mb-3">
             <FormLabel>Nombre</FormLabel>
             <FormControl>
-              <Input placeholder="Nombre de la cuenta" v-bind="componentField" />
+              <Input placeholder="Nombre del presupuesto" v-bind="componentField" />
             </FormControl>
             <FormMessage />
           </FormItem>
