@@ -8,6 +8,7 @@ import Profile from './views/profile/Page.vue'
 import DashboardLayout from './views/dashboard/Layout.vue'
 import Login from './views/auth/Login.vue'
 import Signup from './views/auth/Signup.vue'
+import Onboarding from './views/onboarding/Page.vue'
 import supabase from './lib/supabase'
 
 declare module 'vue-router' {
@@ -20,7 +21,13 @@ declare module 'vue-router' {
 }
 
 export const routes = [
-
+  {
+    path: '/onboarding',
+    component: Onboarding,
+    meta: {
+      requiresAuth: true
+    }
+  },
   {
     path: '/',
     component: DashboardLayout,
@@ -101,7 +108,7 @@ router.beforeEach(async (to, _, next) => {
   if (requiresAuth && !user) {
     next('/login')
   } else if ((to.path === '/login' || to.path === '/signup') && user) {
-    next('/dashboard')
+    next('/')
   } else {
     next()
   }

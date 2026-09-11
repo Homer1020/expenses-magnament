@@ -23,6 +23,10 @@ import {
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 
+import supabase from '@/lib/supabase'
+import { toast } from 'vue-sonner'
+import { quickSetupDefault } from '@/services/onboarding'
+
 import {
   TrendingUp,
   TrendingDown,
@@ -41,6 +45,8 @@ import {
   AlertCircle,
   Clock,
   Sparkles,
+  Zap,
+  Loader2,
 } from 'lucide-vue-next'
 
 // State
@@ -159,6 +165,27 @@ const fetchDashboardData = async (isRefresh = false) => {
 onMounted(() => {
   fetchDashboardData()
 })
+
+const quickSettingUp = ref(false)
+
+const handleDashboardQuickSetup = async () => {
+  try {
+    quickSettingUp.value = true
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    await quickSetupDefault(user.id, user.user_metadata?.currency || 'USD')
+    toast.success('¡Configuración inicial completada con éxito!')
+    await fetchDashboardData(true)
+  } catch (err: any) {
+    console.error('Error al ejecutar setup rápido desde dashboard:', err)
+    toast.error('Error al inicializar datos', {
+      description: err?.message || 'Inténtalo nuevamente',
+    })
+  } finally {
+    quickSettingUp.value = false
+  }
+}
 
 // Calculations & KPIs
 const totalIncome = computed(() => {
@@ -588,6 +615,45 @@ const monthlySeries = computed(() => {
         </Button>
       </div>
     </div>
+
+    <!-- ONBOARDING WELCOME BANNER (IF EMPTY) -->
+    <Card
+      v-if="!loading && accounts.length === 0 && categories.length === 0"
+      class="border-primary/30 bg-linear-to-r from-primary/10 via-primary/5 to-transparent p-5 sm:p-6 shadow-sm overflow-hidden relative"
+    >
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div class="space-y-1.5 max-w-xl">
+          <div class="flex items-center gap-2">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <Sparkles class="h-4 w-4" />
+            </div>
+            <h2 class="text-base sm:text-lg font-bold text-foreground">¡Bienvenido a tu Gestor de Gastos!</h2>
+          </div>
+          <p class="text-xs sm:text-sm text-muted-foreground">
+            Aún no has configurado tus presupuestos ni tus categorías. Configura tu espacio en 1 minuto para empezar a registrar movimientos y ver estadísticas.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto shrink-0">
+          <Button as-child class="gap-1.5 shadow-xs flex-1 md:flex-initial">
+            <RouterLink to="/onboarding">
+              <Sparkles class="h-4 w-4" />
+              <span>Iniciar Asistente</span>
+            </RouterLink>
+          </Button>
+          <Button
+            variant="outline"
+            class="gap-1.5 flex-1 md:flex-initial bg-card/80"
+            :disabled="quickSettingUp"
+            @click="handleDashboardQuickSetup"
+          >
+            <Loader2 v-if="quickSettingUp" class="h-4 w-4 animate-spin" />
+            <Zap v-else class="h-4 w-4 text-primary" />
+            <span>Setup Rápido (1 Clic)</span>
+          </Button>
+        </div>
+      </div>
+    </Card>
 
     <!-- FILTER TOOLBAR -->
     <Card class="border shadow-xs bg-card/60 backdrop-blur-xs p-0">

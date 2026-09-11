@@ -4,6 +4,8 @@ import type { Account, Transaction } from '@/types'
 import type { PostgrestError } from '@supabase/supabase-js'
 import * as accountsService from '@/services/accounts'
 import * as transactionsService from '@/services/transactions'
+import { PRESET_ACCOUNT_GROUPS } from '@/constants/presets'
+import supabase from '@/lib/supabase'
 import { type AccountWithMetrics, type PeriodView } from './columns'
 import Table from './Table.vue'
 import Button from '@/components/ui/button/Button.vue'
@@ -16,7 +18,7 @@ import SelectItem from '@/components/ui/select/SelectItem.vue'
 import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
 import SelectValue from '@/components/ui/select/SelectValue.vue'
 import { formatCurrency } from '@/lib/formatters'
-import { Wallet, TrendingDown, PiggyBank, Sparkles } from 'lucide-vue-next'
+import { Wallet, TrendingDown, PiggyBank, Sparkles, Loader2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
 const accounts = ref<Account[]>([])
@@ -127,6 +129,35 @@ const openCreate = () => {
   open.value = true
 }
 
+const seedingAccounts = ref(false)
+
+const handleLoadDefaultAccounts = async () => {
+  try {
+    seedingAccounts.value = true
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+
+    const toInsert = PRESET_ACCOUNT_GROUPS[0].accounts.map((a) => ({
+      name: a.name,
+      percentage: a.percentage,
+      user_id: user.id,
+    }))
+
+    const { error } = await supabase.from('accounts').insert(toInsert)
+    if (error) throw error
+
+    toast.success('¡Presupuestos recomendados cargados con éxito!')
+    await fetchData()
+  } catch (err: any) {
+    console.error('Error al cargar presupuestos recomendados:', err)
+    toast.error('Error al cargar presupuestos', {
+      description: err?.message || 'Inténtalo de nuevo'
+    })
+  } finally {
+    seedingAccounts.value = false
+  }
+}
+
 const openEdit = (account: Account) => {
   editingAccount.value = account
   open.value = true
@@ -154,6 +185,20 @@ const openEdit = (account: Account) => {
             </SelectGroup>
           </SelectContent>
         </Select>
+
+        <Button
+          v-if="!loading && accounts.length === 0"
+          variant="outline"
+          size="sm"
+          :disabled="seedingAccounts"
+          @click="handleLoadDefaultAccounts"
+          class="gap-1.5"
+        >
+          <Loader2 v-if="seedingAccounts" class="h-4 w-4 animate-spin" />
+          <Sparkles v-else class="h-4 w-4 text-primary" />
+          <span>Cargar Predeterminados</span>
+        </Button>
+
         <Button @click="openCreate" class="gap-1.5 shadow-sm">
           <Sparkles class="h-4 w-4" />
           Nuevo Presupuesto

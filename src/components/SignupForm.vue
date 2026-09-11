@@ -62,12 +62,12 @@ const handleSignup = handleSubmit(async values => {
   }
 
   toast.success('Cuenta creada exitosamente')
-  router.push({ path: '/', replace: true })
+  router.push({ path: '/onboarding', replace: true })
 })
 </script>
 
 <template>
-  <div class="mx-2 md:mx-auto md:max-w-lg mt-20">
+  <div class="mx-2 md:mx-auto md:max-w-lg mt-20 mb-10">
     <div class="flex flex-col gap-6">
       <Card>
         <CardHeader>
