@@ -467,23 +467,38 @@ const categorySeries = computed(() => {
   return series.length > 0 ? series : [0]
 })
 
-// ---------------- CHART 3: Monthly History (Bar Chart) ----------------
-const monthlyChartOptions = computed<ApexOptions>(() => {
-  // Aggregate all transactions by month (last 6 months)
+// ---------------- CHART 3 & SEMESTER METRICS: Monthly History (Bar Chart) ----------------
+const semesterHistory = computed(() => {
   const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-  const monthsData: { key: string; label: string; income: number; expense: number }[] = []
-
+  const fullMonthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
   const d = new Date()
+  const list: {
+    key: string
+    shortLabel: string
+    fullLabel: string
+    month: string
+    year: number
+    income: number
+    expense: number
+    balance: number
+    savingsRate: number
+  }[] = []
+
   for (let i = 5; i >= 0; i--) {
     const targetDate = new Date(d.getFullYear(), d.getMonth() - i, 1)
     const y = targetDate.getFullYear()
     const m = targetDate.getMonth()
     const key = `${y}-${String(m + 1).padStart(2, '0')}`
-    monthsData.push({
+    list.push({
       key,
-      label: `${monthNames[m]} ${y !== d.getFullYear() ? "'" + String(y).slice(2) : ''}`,
+      shortLabel: `${monthNames[m]} ${y !== d.getFullYear() ? "'" + String(y).slice(2) : ''}`,
+      fullLabel: `${fullMonthNames[m]} ${y}`,
+      month: monthNames[m],
+      year: y,
       income: 0,
       expense: 0,
+      balance: 0,
+      savingsRate: 0,
     })
   }
 
@@ -491,7 +506,7 @@ const monthlyChartOptions = computed<ApexOptions>(() => {
     const dateStr = t.date || t.created_at
     if (!dateStr) return
     const key = dateStr.slice(0, 7) // YYYY-MM
-    const match = monthsData.find((m) => m.key === key)
+    const match = list.find((item) => item.key === key)
     if (match) {
       if (t.categories?.type === 1) {
         match.income += Number(t.amount) || 0
@@ -501,17 +516,44 @@ const monthlyChartOptions = computed<ApexOptions>(() => {
     }
   })
 
+  list.forEach((item) => {
+    item.balance = item.income - item.expense
+    item.savingsRate = item.income > 0 ? Math.max(0, ((item.income - item.expense) / item.income) * 100) : 0
+  })
+
+  return list
+})
+
+const semesterTotals = computed(() => {
+  const totalIncome = semesterHistory.value.reduce((sum, m) => sum + m.income, 0)
+  const totalExpense = semesterHistory.value.reduce((sum, m) => sum + m.expense, 0)
+  const netBalance = totalIncome - totalExpense
+  const avgMonthlyIncome = totalIncome / 6
+  const avgMonthlyExpense = totalExpense / 6
+  const avgSavingsRate = totalIncome > 0 ? Math.max(0, (netBalance / totalIncome) * 100) : 0
+
+  return {
+    totalIncome,
+    totalExpense,
+    netBalance,
+    avgMonthlyIncome,
+    avgMonthlyExpense,
+    avgSavingsRate,
+  }
+})
+
+const monthlyChartOptions = computed<ApexOptions>(() => {
   return {
     chart: {
       type: 'bar',
-      height: 280,
+      height: 220,
       fontFamily: 'inherit',
       toolbar: { show: false },
     },
     plotOptions: {
       bar: {
         horizontal: false,
-        columnWidth: '45%',
+        columnWidth: '42%',
         borderRadius: 4,
       },
     },
@@ -519,14 +561,14 @@ const monthlyChartOptions = computed<ApexOptions>(() => {
     colors: ['#10b981', '#f43f5e'],
     stroke: { show: true, width: 2, colors: ['transparent'] },
     xaxis: {
-      categories: monthsData.map((m) => m.label),
-      labels: { style: { colors: '#9ca3af', fontSize: '12px' } },
+      categories: semesterHistory.value.map((m) => m.shortLabel),
+      labels: { style: { colors: '#9ca3af', fontSize: '11px' } },
       axisBorder: { show: false },
       axisTicks: { show: false },
     },
     yaxis: {
       labels: {
-        style: { colors: '#9ca3af', fontSize: '12px' },
+        style: { colors: '#9ca3af', fontSize: '11px' },
         formatter: (val) => `$${val.toLocaleString()}`,
       },
     },
@@ -544,36 +586,15 @@ const monthlyChartOptions = computed<ApexOptions>(() => {
       position: 'top',
       horizontalAlign: 'right',
       labels: { colors: '#9ca3af' },
+      fontSize: '12px',
     },
   }
 })
 
 const monthlySeries = computed(() => {
-  const monthsData: { key: string; income: number; expense: number }[] = []
-  const d = new Date()
-  for (let i = 5; i >= 0; i--) {
-    const targetDate = new Date(d.getFullYear(), d.getMonth() - i, 1)
-    const key = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}`
-    monthsData.push({ key, income: 0, expense: 0 })
-  }
-
-  allTimeTransactions.value.forEach((t) => {
-    const dateStr = t.date || t.created_at
-    if (!dateStr) return
-    const key = dateStr.slice(0, 7)
-    const match = monthsData.find((m) => m.key === key)
-    if (match) {
-      if (t.categories?.type === 1) {
-        match.income += Number(t.amount) || 0
-      } else {
-        match.expense += Number(t.amount) || 0
-      }
-    }
-  })
-
   return [
-    { name: 'Ingresos', data: monthsData.map((m) => m.income) },
-    { name: 'Gastos', data: monthsData.map((m) => m.expense) },
+    { name: 'Ingresos', data: semesterHistory.value.map((m) => m.income) },
+    { name: 'Gastos', data: semesterHistory.value.map((m) => m.expense) },
   ]
 })
 </script>
@@ -886,7 +907,7 @@ const monthlySeries = computed(() => {
       <!-- 3. ACCOUNTS BUDGET DISTRIBUTION & MONTHLY COMPARISON -->
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-7">
         <!-- Accounts Distribution Card (3 cols) -->
-        <Card class="lg:col-span-3 border shadow-xs">
+        <Card class="lg:col-span-3 border shadow-xs flex flex-col justify-between">
           <CardHeader class="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle class="text-base font-semibold">Distribución por Presupuestos</CardTitle>
@@ -899,7 +920,7 @@ const monthlySeries = computed(() => {
               </RouterLink>
             </Button>
           </CardHeader>
-          <CardContent class="space-y-4">
+          <CardContent class="space-y-4 flex-1 flex flex-col justify-between">
             <div v-if="accounts.length === 0" class="flex flex-col items-center justify-center py-8 text-center text-muted-foreground">
               <Layers class="h-8 w-8 opacity-30 mb-2" />
               <p class="text-sm font-medium">No has creado presupuestos aún</p>
@@ -908,70 +929,72 @@ const monthlySeries = computed(() => {
                 <RouterLink to="/accounts">Crear Presupuestos</RouterLink>
               </Button>
             </div>
-            <div v-else class="space-y-3.5">
-              <div
-                v-for="acc in accountsDistribution"
-                :key="acc.id"
-                class="rounded-lg border bg-card/50 p-3 transition-colors hover:bg-accent/40 space-y-2"
-              >
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center gap-2">
+            <div v-else class="space-y-3.5 flex-1 flex flex-col justify-between">
+              <div class="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+                <div
+                  v-for="acc in accountsDistribution"
+                  :key="acc.id"
+                  class="rounded-lg border bg-card/50 p-3 transition-colors hover:bg-accent/40 space-y-2"
+                >
+                  <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                      <div
+                        class="h-2 w-2 rounded-full"
+                        :class="acc.spentRatio > 100 ? 'bg-rose-500' : acc.spentRatio >= 80 ? 'bg-amber-500' : 'bg-primary'"
+                      ></div>
+                      <span class="font-medium text-sm">{{ acc.name }}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="text-xs text-muted-foreground">{{ Math.round(acc.spentRatio) }}% usado</span>
+                      <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                        {{ acc.percentage }}%
+                      </span>
+                    </div>
+                  </div>
+
+                  <!-- Spending Progress Bar -->
+                  <div class="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
                     <div
-                      class="h-2 w-2 rounded-full"
+                      class="h-full rounded-full transition-all duration-500"
                       :class="acc.spentRatio > 100 ? 'bg-rose-500' : acc.spentRatio >= 80 ? 'bg-amber-500' : 'bg-primary'"
+                      :style="{ width: `${Math.min(100, acc.spentRatio)}%` }"
                     ></div>
-                    <span class="font-medium text-sm">{{ acc.name }}</span>
                   </div>
-                  <div class="flex items-center gap-1.5">
-                    <span class="text-xs text-muted-foreground">{{ Math.round(acc.spentRatio) }}% usado</span>
-                    <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
-                      {{ acc.percentage }}%
-                    </span>
-                  </div>
-                </div>
 
-                <!-- Spending Progress Bar -->
-                <div class="h-1.5 w-full overflow-hidden rounded-full bg-secondary">
-                  <div
-                    class="h-full rounded-full transition-all duration-500"
-                    :class="acc.spentRatio > 100 ? 'bg-rose-500' : acc.spentRatio >= 80 ? 'bg-amber-500' : 'bg-primary'"
-                    :style="{ width: `${Math.min(100, acc.spentRatio)}%` }"
-                  ></div>
-                </div>
+                  <div class="grid grid-cols-3 gap-1 pt-1 text-[11px]">
+                    <div>
+                      <span class="text-muted-foreground block">Presupuesto:</span>
+                      <span class="font-medium text-foreground">{{ formatCurrency(acc.allocatedBudget) }}</span>
+                    </div>
+                    <div>
+                      <span class="text-muted-foreground block">Gastado:</span>
+                      <span class="font-medium text-rose-500">{{ formatCurrency(acc.spent) }}</span>
+                    </div>
+                    <div class="text-right">
+                      <span class="text-muted-foreground block">Disponible:</span>
+                      <span
+                        class="font-bold"
+                        :class="acc.available >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+                      >
+                        {{ formatCurrency(acc.available) }}
+                      </span>
+                    </div>
+                  </div>
 
-                <div class="grid grid-cols-3 gap-1 pt-1 text-[11px]">
-                  <div>
-                    <span class="text-muted-foreground block">Presupuesto:</span>
-                    <span class="font-medium text-foreground">{{ formatCurrency(acc.allocatedBudget) }}</span>
-                  </div>
-                  <div>
-                    <span class="text-muted-foreground block">Gastado:</span>
-                    <span class="font-medium text-rose-500">{{ formatCurrency(acc.spent) }}</span>
-                  </div>
-                  <div class="text-right">
-                    <span class="text-muted-foreground block">Disponible:</span>
+                  <div class="flex items-center justify-between pt-1.5 border-t border-dashed text-[11px]">
+                    <span class="text-muted-foreground">Fondo acumulado:</span>
                     <span
                       class="font-bold"
-                      :class="acc.available >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+                      :class="acc.fundBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
                     >
-                      {{ formatCurrency(acc.available) }}
+                      {{ formatCurrency(acc.fundBalance) }}
                     </span>
                   </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-1.5 border-t border-dashed text-[11px]">
-                  <span class="text-muted-foreground">Fondo acumulado:</span>
-                  <span
-                    class="font-bold"
-                    :class="acc.fundBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
-                  >
-                    {{ formatCurrency(acc.fundBalance) }}
-                  </span>
                 </div>
               </div>
 
               <!-- Total percentage hint -->
-              <div class="flex items-center justify-between text-xs text-muted-foreground pt-1 border-t">
+              <div class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t mt-auto">
                 <span>Porcentaje asignado total:</span>
                 <span
                   class="font-semibold"
@@ -985,23 +1008,129 @@ const monthlySeries = computed(() => {
         </Card>
 
         <!-- Monthly Trends Comparison (4 cols) -->
-        <Card class="lg:col-span-4 border shadow-xs">
-          <CardHeader class="flex flex-row items-center justify-between pb-2">
+        <Card class="lg:col-span-4 border shadow-xs flex flex-col justify-between">
+          <CardHeader class="flex flex-row items-center justify-between pb-3">
             <div>
-              <CardTitle class="text-base font-semibold">Tendencia Semestral</CardTitle>
-              <CardDescription>Comparativa histórica de ingresos y egresos (últimos 6 meses)</CardDescription>
+              <div class="flex items-center gap-2">
+                <CardTitle class="text-base font-semibold">Tendencia Semestral</CardTitle>
+                <span class="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-medium text-primary">
+                  Últimos 6 meses
+                </span>
+              </div>
+              <CardDescription>Comparativa histórica de ingresos, egresos y balance mensual consolidado</CardDescription>
             </div>
             <div class="rounded-full bg-primary/10 p-2 text-primary">
               <Clock class="h-4 w-4" />
             </div>
           </CardHeader>
-          <CardContent>
-            <VueApexCharts
-              type="bar"
-              height="280"
-              :options="monthlyChartOptions"
-              :series="monthlySeries"
-            />
+          <CardContent class="space-y-4 flex-1 flex flex-col justify-between">
+            <!-- Summary KPI metrics -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              <div class="rounded-lg border bg-card/60 p-2.5">
+                <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <TrendingUp class="h-3.5 w-3.5 text-emerald-500" />
+                  <span class="truncate">Total Ingresos</span>
+                </div>
+                <div class="mt-1 text-base font-bold text-emerald-600 dark:text-emerald-400">
+                  {{ formatCurrency(semesterTotals.totalIncome) }}
+                </div>
+                <div class="text-[11px] text-muted-foreground truncate">
+                  Prom. {{ formatCurrency(semesterTotals.avgMonthlyIncome) }}/mes
+                </div>
+              </div>
+
+              <div class="rounded-lg border bg-card/60 p-2.5">
+                <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <TrendingDown class="h-3.5 w-3.5 text-rose-500" />
+                  <span class="truncate">Total Gastos</span>
+                </div>
+                <div class="mt-1 text-base font-bold text-rose-600 dark:text-rose-400">
+                  {{ formatCurrency(semesterTotals.totalExpense) }}
+                </div>
+                <div class="text-[11px] text-muted-foreground truncate">
+                  Prom. {{ formatCurrency(semesterTotals.avgMonthlyExpense) }}/mes
+                </div>
+              </div>
+
+              <div class="rounded-lg border bg-card/60 p-2.5">
+                <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Wallet
+                    class="h-3.5 w-3.5"
+                    :class="semesterTotals.netBalance >= 0 ? 'text-emerald-500' : 'text-rose-500'"
+                  />
+                  <span class="truncate">Balance Neto</span>
+                </div>
+                <div
+                  class="mt-1 text-base font-bold"
+                  :class="semesterTotals.netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+                >
+                  {{ semesterTotals.netBalance > 0 ? '+' : '' }}{{ formatCurrency(semesterTotals.netBalance) }}
+                </div>
+                <div class="text-[11px] text-muted-foreground truncate">
+                  {{ formatPercentage(semesterTotals.avgSavingsRate) }} tasa de ahorro
+                </div>
+              </div>
+            </div>
+
+            <!-- Apex Bar Chart -->
+            <div class="relative">
+              <VueApexCharts
+                type="bar"
+                height="220"
+                :options="monthlyChartOptions"
+                :series="monthlySeries"
+              />
+            </div>
+
+            <!-- Historical Monthly Breakdown List -->
+            <div class="space-y-2 pt-2 border-t mt-auto">
+              <div class="flex items-center justify-between text-xs font-medium text-muted-foreground pb-0.5">
+                <span>Historial Mensual</span>
+                <span>Balance & Rendimiento</span>
+              </div>
+
+              <div class="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                <div
+                  v-for="m in [...semesterHistory].reverse()"
+                  :key="m.key"
+                  class="flex items-center justify-between rounded-md border bg-accent/20 px-2.5 py-1.5 text-xs transition-colors hover:bg-accent/50"
+                >
+                  <div class="flex items-center gap-2">
+                    <span class="font-medium text-foreground w-14">{{ m.shortLabel }}</span>
+                    <div class="hidden sm:flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                      <span class="text-emerald-600 dark:text-emerald-400 font-medium">
+                        +{{ formatCurrency(m.income) }}
+                      </span>
+                      <span>•</span>
+                      <span class="text-rose-600 dark:text-rose-400 font-medium">
+                        -{{ formatCurrency(m.expense) }}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="font-semibold"
+                      :class="m.balance > 0 ? 'text-emerald-600 dark:text-emerald-400' : m.balance < 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground'"
+                    >
+                      {{ m.balance > 0 ? '+' : '' }}{{ formatCurrency(m.balance) }}
+                    </span>
+                    <span
+                      class="rounded px-1.5 py-0.5 text-[10px] font-medium"
+                      :class="
+                        m.income === 0 && m.expense === 0
+                          ? 'bg-muted text-muted-foreground'
+                          : m.balance >= 0
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                      "
+                    >
+                      {{ m.income === 0 && m.expense === 0 ? 'Sin act.' : `${Math.round(m.savingsRate)}%` }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
