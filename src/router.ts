@@ -9,6 +9,7 @@ import DashboardLayout from './views/dashboard/Layout.vue'
 import Login from './views/auth/Login.vue'
 import Signup from './views/auth/Signup.vue'
 import Onboarding from './views/onboarding/Page.vue'
+import NotFound from './views/NotFound.vue'
 import supabase from './lib/supabase'
 
 declare module 'vue-router' {
@@ -17,6 +18,7 @@ declare module 'vue-router' {
       title: string
       href?: string // Opcional porque el último item no necesita href
     }>
+    requiresAuth?: boolean
   }
 }
 
@@ -93,6 +95,14 @@ export const routes = [
   {
     path: '/signup',
     component: Signup
+  },
+  {
+    path: '/:pathMatch(.*)*',
+    name: 'NotFound',
+    component: NotFound,
+    meta: {
+      requiresAuth: false
+    }
   }
 ]
 

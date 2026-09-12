@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <title>Sin conexión | Expenses Management</title>
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon-180x180.png" />
+    <style>
+      :root {
+        --bg-color: #ffffff;
+        --card-bg: #f9fafb;
+        --text-primary: #111827;
+        --text-secondary: #6b7280;
+        --border-color: #e5e7eb;
+        --accent: #18181b;
+        --accent-text: #ffffff;
+        --badge-bg: #fee2e2;
+        --badge-text: #b91c1c;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-color: #09090b;
+          --card-bg: #18181b;
+          --text-primary: #f4f4f5;
+          --text-secondary: #a1a1aa;
+          --border-color: #27272a;
+          --accent: #f4f4f5;
+          --accent-text: #09090b;
+          --badge-bg: rgba(239, 68, 68, 0.15);
+          --badge-text: #f87171;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--bg-color);
+        color: var(--text-primary);
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+
+      .container {
+        max-width: 480px;
+        width: 100%;
+        background-color: var(--card-bg);
+        border: 1px solid var(--border-color);
+        border-radius: 1rem;
+        padding: 2.5rem 2rem;
+        text-align: center;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+        animation: fadeIn 0.4s ease-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .icon-container {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 1.5rem auto;
+        border-radius: 50%;
+        background: var(--badge-bg);
+        color: var(--badge-text);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        animation: pulse 2s infinite ease-in-out;
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.05);
+          opacity: 0.85;
+        }
+      }
+
+      .icon-container svg {
+        width: 36px;
+        height: 36px;
+      }
+
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        background: var(--badge-bg);
+        color: var(--badge-text);
+        margin-bottom: 1rem;
+      }
+
+      .badge-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: currentColor;
+      }
+
+      h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.75rem;
+        letter-spacing: -0.02em;
+      }
+
+      p {
+        font-size: 0.95rem;
+        color: var(--text-secondary);
+        line-height: 1.5;
+        margin-bottom: 2rem;
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.5rem;
+        font-size: 0.925rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        text-decoration: none;
+      }
+
+      .btn-primary {
+        background-color: var(--accent);
+        color: var(--accent-text);
+      }
+
+      .btn-primary:hover {
+        opacity: 0.9;
+        transform: translateY(-1px);
+      }
+
+      .btn-primary:active {
+        transform: translateY(0);
+      }
+
+      .btn-secondary {
+        background-color: transparent;
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+      }
+
+      .btn-secondary:hover {
+        background-color: var(--border-color);
+      }
+
+      .status-text {
+        margin-top: 1.25rem;
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="icon-container">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 3l18 18M8.5 8.5A6.5 6.5 0 0119.5 12m-3.5 3.5a3.5 3.5 0 01-4.9-4.9M1.5 8.5C3.7 6.3 6.7 5 10 5c1.8 0 3.5.4 5 1.2M5 19.5l4-4" />
+        </svg>
+      </div>
+
+      <div class="badge">
+        <span class="badge-dot"></span>
+        Modo Offline
+      </div>
+
+      <h1>Sin conexión a internet</h1>
+      <p>
+        Parece que has perdido la conexión a internet. La aplicación reanudará la sincronización en cuanto se restablezca la red.
+      </p>
+
+      <div class="actions">
+        <button id="retry-btn" class="btn btn-primary" onclick="checkConnection()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+            <path d="M3 3v5h5"/>
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+            <path d="M16 16h5v5"/>
+          </svg>
+          Reintentar conexión
+        </button>
+        <a href="/" class="btn btn-secondary">
+          Ir a la app principal
+        </a>
+      </div>
+
+      <div id="status-indicator" class="status-text">
+        Esperando conexión...
+      </div>
+    </div>
+
+    <script>
+      function checkConnection() {
+        const btn = document.getElementById('retry-btn');
+        const status = document.getElementById('status-indicator');
+        
+        status.textContent = 'Comprobando conexión...';
+        btn.disabled = true;
+        btn.style.opacity = '0.7';
+
+        fetch('/', { method: 'HEAD', cache: 'no-store' })
+          .then(() => {
+            status.textContent = '¡Conexión restablecida! Redirigiendo...';
+            status.style.color = '#10b981';
+            setTimeout(() => {
+              window.location.href = '/';
+            }, 800);
+          })
+          .catch(() => {
+            status.textContent = 'Aún sin conexión. Inténtalo de nuevo en unos momentos.';
+            btn.disabled = false;
+            btn.style.opacity = '1';
+          });
+      }
+
+      window.addEventListener('online', () => {
+        const status = document.getElementById('status-indicator');
+        status.textContent = '¡Conexión detectada! Redirigiendo...';
+        status.style.color = '#10b981';
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>
