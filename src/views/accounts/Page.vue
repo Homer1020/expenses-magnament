@@ -208,7 +208,7 @@ const openEdit = (account: Account) => {
 
     <!-- Summary Metrics Cards -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">
@@ -222,7 +222,7 @@ const openEdit = (account: Account) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">
@@ -242,7 +242,7 @@ const openEdit = (account: Account) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">
@@ -256,7 +256,7 @@ const openEdit = (account: Account) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">
@@ -275,7 +275,7 @@ const openEdit = (account: Account) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Total en Fondos</p>

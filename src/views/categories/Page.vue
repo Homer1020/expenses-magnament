@@ -171,7 +171,7 @@ const openEdit = (category: TransactionCategory) => {
 
     <!-- Summary Metrics Cards -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Total Categorías</p>
@@ -186,7 +186,7 @@ const openEdit = (category: TransactionCategory) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Categorías de Gasto</p>
@@ -201,7 +201,7 @@ const openEdit = (category: TransactionCategory) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Categorías de Ingreso</p>
@@ -216,7 +216,7 @@ const openEdit = (category: TransactionCategory) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Mayor Gasto por Categoría</p>

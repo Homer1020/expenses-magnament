@@ -126,7 +126,7 @@ const updateFilters = async (dateRange: DateRange) => {
 
     <!-- Summary Metrics Cards -->
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Total Ingresos</p>
@@ -143,7 +143,7 @@ const updateFilters = async (dateRange: DateRange) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Total Gastos</p>
@@ -160,7 +160,7 @@ const updateFilters = async (dateRange: DateRange) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Balance Neto</p>
@@ -183,7 +183,7 @@ const updateFilters = async (dateRange: DateRange) => {
         </CardContent>
       </Card>
 
-      <Card class="border shadow-xs">
+      <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">Total Transacciones</p>
