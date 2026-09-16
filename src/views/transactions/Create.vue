@@ -26,6 +26,8 @@ import * as accountsService from '@/services/accounts'
 import * as transactionsService from '@/services/transactions'
 import type { Transaction, TransactionCategory, Account } from '@/types'
 import { formatCurrency } from '@/lib/formatters'
+import { useSettings } from '@/composables/useSettings'
+import BsHint from '@/components/BsHint.vue'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
 import { computed, nextTick, ref, watch } from 'vue'
@@ -42,6 +44,9 @@ const { open, hide, transaction } = defineProps<{
 }>()
 
 const isEditing = computed(() => !!transaction)
+
+const { currency } = useSettings()
+const amountLabel = computed(() => `Monto (${currency.value})`)
 
 const formSchema = toTypedSchema(z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
@@ -323,7 +328,10 @@ const onSubmit = handleSubmit(async (formValues) => {
               <Wallet class="h-3.5 w-3.5 text-primary" />
               Presupuesto Mensual ({{ selectedAccountData.percentage }}% de {{ formatCurrency(monthlyIncome) }}):
             </span>
-            <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.allocatedBudget) }}</span>
+            <span class="flex flex-col items-end">
+              <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.allocatedBudget) }}</span>
+              <BsHint :value="selectedAccountData.allocatedBudget" inline />
+            </span>
           </div>
 
           <div class="flex items-center justify-between">
@@ -331,27 +339,36 @@ const onSubmit = handleSubmit(async (formValues) => {
               <TrendingDown class="h-3.5 w-3.5 text-rose-500" />
               Gastado este mes:
             </span>
-            <span class="font-medium text-rose-500">{{ formatCurrency(selectedAccountData.spentSoFar) }}</span>
+            <span class="flex flex-col items-end">
+              <span class="font-medium text-rose-500">{{ formatCurrency(selectedAccountData.spentSoFar) }}</span>
+              <BsHint :value="selectedAccountData.spentSoFar" inline />
+            </span>
           </div>
 
           <div class="flex items-center justify-between pt-1.5 border-t">
             <span class="font-medium">Disponible actual en presupuesto:</span>
-            <span
-              class="font-bold text-sm"
-              :class="selectedAccountData.availableBefore >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
-            >
-              {{ formatCurrency(selectedAccountData.availableBefore) }}
+            <span class="flex flex-col items-end">
+              <span
+                class="font-bold text-sm"
+                :class="selectedAccountData.availableBefore >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+              >
+                {{ formatCurrency(selectedAccountData.availableBefore) }}
+              </span>
+              <BsHint :value="selectedAccountData.availableBefore" inline />
             </span>
           </div>
 
           <!-- Projected remaining if amount is typed -->
           <div v-if="selectedAccountData.currentAmount > 0" class="flex items-center justify-between pt-1.5 border-t border-dashed">
             <span class="text-muted-foreground">Restante tras este gasto:</span>
-            <span
-              class="font-bold text-sm"
-              :class="selectedAccountData.projectedRemaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
-            >
-              {{ formatCurrency(selectedAccountData.projectedRemaining) }}
+            <span class="flex flex-col items-end">
+              <span
+                class="font-bold text-sm"
+                :class="selectedAccountData.projectedRemaining >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+              >
+                {{ formatCurrency(selectedAccountData.projectedRemaining) }}
+              </span>
+              <BsHint :value="selectedAccountData.projectedRemaining" inline />
             </span>
           </div>
 
@@ -372,13 +389,19 @@ const onSubmit = handleSubmit(async (formValues) => {
               <Wallet class="h-3.5 w-3.5 text-primary" />
               Saldo actual del fondo:
             </span>
-            <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.currentBalance) }}</span>
+            <span class="flex flex-col items-end">
+              <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.currentBalance) }}</span>
+              <BsHint :value="selectedAccountData.currentBalance" inline />
+            </span>
           </div>
 
           <div v-if="selectedAccountData.currentAmount > 0" class="flex items-center justify-between pt-1.5 border-t border-dashed">
             <span class="text-muted-foreground">Saldo proyectado tras este ingreso:</span>
-            <span class="font-bold text-sm text-emerald-600 dark:text-emerald-400">
-              {{ formatCurrency(selectedAccountData.projectedBalance) }}
+            <span class="flex flex-col items-end">
+              <span class="font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                {{ formatCurrency(selectedAccountData.projectedBalance) }}
+              </span>
+              <BsHint :value="selectedAccountData.projectedBalance" inline />
             </span>
           </div>
         </div>
@@ -386,10 +409,11 @@ const onSubmit = handleSubmit(async (formValues) => {
         <!-- Monto -->
         <FormField v-slot="{ componentField }" name="amount" :validate-on-blur="!isFieldDirty">
           <FormItem>
-            <FormLabel>Monto (USD)</FormLabel>
+            <FormLabel>{{ amountLabel }}</FormLabel>
             <FormControl>
               <Input type="number" step="0.01" placeholder="80.00" v-bind="componentField" />
             </FormControl>
+            <BsHint v-if="Number(values.amount) > 0" :value="Number(values.amount)" />
             <FormMessage />
           </FormItem>
         </FormField>

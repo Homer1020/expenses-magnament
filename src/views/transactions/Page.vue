@@ -8,6 +8,7 @@ import Button from '@/components/ui/button/Button.vue'
 import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/formatters'
+import BsHint from '@/components/BsHint.vue'
 import { CalendarDate } from '@internationalized/date'
 import type { DateRange } from 'reka-ui'
 import { toast } from 'vue-sonner'
@@ -109,14 +110,14 @@ const updateFilters = async (dateRange: DateRange) => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         <h1 class="text-xl font-bold tracking-tight">Transacciones</h1>
         <p class="text-xs text-muted-foreground mt-0.5">
           Historial y registro detallado de todos tus ingresos y egresos.
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Button @click="openCreate" class="gap-1.5 shadow-sm">
           <Plus class="h-4 w-4" />
           Nueva Transacción
@@ -133,6 +134,7 @@ const updateFilters = async (dateRange: DateRange) => {
             <h3 class="text-lg font-bold mt-0.5 text-emerald-600 dark:text-emerald-400">
               {{ formatCurrency(totalIncome) }}
             </h3>
+            <BsHint :value="totalIncome" />
             <span class="text-[11px] font-medium text-muted-foreground">
               {{ incomeCount }} {{ incomeCount === 1 ? 'movimiento' : 'movimientos' }}
             </span>
@@ -150,6 +152,7 @@ const updateFilters = async (dateRange: DateRange) => {
             <h3 class="text-lg font-bold text-rose-500 mt-0.5">
               {{ formatCurrency(totalExpenses) }}
             </h3>
+            <BsHint :value="totalExpenses" />
             <span class="text-[11px] font-medium text-muted-foreground">
               {{ expenseCount }} {{ expenseCount === 1 ? 'movimiento' : 'movimientos' }}
             </span>
@@ -170,6 +173,7 @@ const updateFilters = async (dateRange: DateRange) => {
             >
               {{ formatCurrency(netBalance) }}
             </h3>
+            <BsHint :value="netBalance" />
             <span
               class="text-[11px] font-medium"
               :class="netBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
@@ -191,7 +195,7 @@ const updateFilters = async (dateRange: DateRange) => {
               {{ transactions.length }}
             </h3>
             <span class="text-[11px] font-medium text-muted-foreground">
-              Promedio: {{ formatCurrency(avgTransactionAmount) }}
+              Promedio: {{ formatCurrency(avgTransactionAmount) }}<BsHint :value="avgTransactionAmount" inline />
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400">

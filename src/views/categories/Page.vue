@@ -11,6 +11,7 @@ import Button from '@/components/ui/button/Button.vue'
 import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/formatters'
+import BsHint from '@/components/BsHint.vue'
 import { toast } from 'vue-sonner'
 import { Sparkles, Loader2, Tags, TrendingDown, TrendingUp, PieChart, Plus } from 'lucide-vue-next'
 
@@ -142,14 +143,14 @@ const openEdit = (category: TransactionCategory) => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         <h1 class="text-xl font-bold tracking-tight">Categorías</h1>
         <p class="text-xs text-muted-foreground mt-0.5">
           Organiza y clasifica tus ingresos y gastos para un mejor control financiero.
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Button
           v-if="!loading && categories.length === 0"
           variant="outline"
@@ -192,7 +193,7 @@ const openEdit = (category: TransactionCategory) => {
             <p class="text-xs font-medium text-muted-foreground">Categorías de Gasto</p>
             <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ expenseCategoriesCount }}</h3>
             <span class="text-[11px] font-medium text-muted-foreground">
-              {{ totalExpensesAmount > 0 ? formatCurrency(totalExpensesAmount) + ' registrado' : 'Para clasificar egresos' }}
+              {{ totalExpensesAmount > 0 ? formatCurrency(totalExpensesAmount) + ' registrado' : 'Para clasificar egresos' }}<BsHint v-if="totalExpensesAmount > 0" :value="totalExpensesAmount" inline />
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-rose-500/10 text-rose-500">
@@ -207,7 +208,7 @@ const openEdit = (category: TransactionCategory) => {
             <p class="text-xs font-medium text-muted-foreground">Categorías de Ingreso</p>
             <h3 class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{{ incomeCategoriesCount }}</h3>
             <span class="text-[11px] font-medium text-muted-foreground">
-              {{ totalIncomeAmount > 0 ? formatCurrency(totalIncomeAmount) + ' registrado' : 'Para clasificar entradas' }}
+              {{ totalIncomeAmount > 0 ? formatCurrency(totalIncomeAmount) + ' registrado' : 'Para clasificar entradas' }}<BsHint v-if="totalIncomeAmount > 0" :value="totalIncomeAmount" inline />
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -224,7 +225,7 @@ const openEdit = (category: TransactionCategory) => {
               {{ topExpenseCategory ? topExpenseCategory.name : 'Sin gastos' }}
             </h3>
             <span class="text-[11px] font-medium text-amber-600 dark:text-amber-400">
-              {{ topExpenseCategory ? formatCurrency(topExpenseCategory.amount) : 'Sin movimientos' }}
+              {{ topExpenseCategory ? formatCurrency(topExpenseCategory.amount) : 'Sin movimientos' }}<BsHint v-if="topExpenseCategory" :value="topExpenseCategory.amount" inline />
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">

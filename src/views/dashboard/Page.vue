@@ -10,7 +10,8 @@ import * as transactionsService from '@/services/transactions'
 import * as categoriesService from '@/services/categories'
 import * as accountsService from '@/services/accounts'
 import type { Transaction, TransactionCategory, Account } from '@/types'
-import { formatCurrency, formatPercentage, formatShortDate } from '@/lib/formatters'
+import { formatCurrency, formatCurrencyWithBs, formatPercentage, formatShortDate } from '@/lib/formatters'
+import BsHint from '@/components/BsHint.vue'
 import TablePicker from '@/views/transactions/TablePicker.vue'
 
 import {
@@ -359,13 +360,13 @@ const flowChartOptions = computed<ApexOptions>(() => {
     yaxis: {
       labels: {
         style: { colors: '#9ca3af', fontSize: '12px' },
-        formatter: (val) => `$${val.toLocaleString()}`,
+        formatter: (val) => formatCurrency(val),
       },
     },
     tooltip: {
       theme: 'dark',
       y: {
-        formatter: (val) => formatCurrency(val),
+        formatter: (val) => formatCurrencyWithBs(val),
       },
     },
     legend: {
@@ -456,7 +457,7 @@ const categoryChartOptions = computed<ApexOptions>(() => {
     tooltip: {
       theme: 'dark',
       y: {
-        formatter: (val) => formatCurrency(val),
+        formatter: (val) => formatCurrencyWithBs(val),
       },
     },
   }
@@ -569,7 +570,7 @@ const monthlyChartOptions = computed<ApexOptions>(() => {
     yaxis: {
       labels: {
         style: { colors: '#9ca3af', fontSize: '11px' },
-        formatter: (val) => `$${val.toLocaleString()}`,
+        formatter: (val) => formatCurrency(val),
       },
     },
     grid: {
@@ -579,7 +580,7 @@ const monthlyChartOptions = computed<ApexOptions>(() => {
     tooltip: {
       theme: 'dark',
       y: {
-        formatter: (val) => formatCurrency(val),
+        formatter: (val) => formatCurrencyWithBs(val),
       },
     },
     legend: {
@@ -758,6 +759,7 @@ const monthlySeries = computed(() => {
             <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {{ formatCurrency(totalIncome) }}
             </div>
+            <BsHint :value="totalIncome" />
             <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{{ incomeTransactionsCount }} {{ incomeTransactionsCount === 1 ? 'ingreso' : 'ingresos' }}</span>
               <span class="inline-flex items-center text-emerald-600 dark:text-emerald-400 font-medium">
@@ -780,6 +782,7 @@ const monthlySeries = computed(() => {
             <div class="text-2xl font-bold text-rose-600 dark:text-rose-400">
               {{ formatCurrency(totalExpenses) }}
             </div>
+            <BsHint :value="totalExpenses" />
             <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>{{ expenseTransactionsCount }} {{ expenseTransactionsCount === 1 ? 'gasto' : 'gastos' }}</span>
               <span class="font-medium text-rose-600 dark:text-rose-400">
@@ -811,6 +814,7 @@ const monthlySeries = computed(() => {
             >
               {{ netBalance > 0 ? '+' : '' }}{{ formatCurrency(netBalance) }}
             </div>
+            <BsHint :value="netBalance" />
             <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span v-if="netBalance >= 0" class="text-emerald-600 dark:text-emerald-400 font-medium">
                 Superávit Disponible
@@ -839,7 +843,7 @@ const monthlySeries = computed(() => {
             </div>
             <div class="mt-2 flex items-center justify-between text-xs text-muted-foreground">
               <span>Promedio diario:</span>
-              <span class="font-semibold text-foreground">{{ formatCurrency(averageDailySpend) }}/día</span>
+              <span class="font-semibold text-foreground">{{ formatCurrency(averageDailySpend) }}/día<BsHint :value="averageDailySpend" inline /></span>
             </div>
           </CardContent>
         </Card>
@@ -965,10 +969,12 @@ const monthlySeries = computed(() => {
                     <div>
                       <span class="text-muted-foreground block">Presupuesto:</span>
                       <span class="font-medium text-foreground">{{ formatCurrency(acc.allocatedBudget) }}</span>
+                      <BsHint :value="acc.allocatedBudget" inline />
                     </div>
                     <div>
                       <span class="text-muted-foreground block">Gastado:</span>
                       <span class="font-medium text-rose-500">{{ formatCurrency(acc.spent) }}</span>
+                      <BsHint :value="acc.spent" inline />
                     </div>
                     <div class="text-right">
                       <span class="text-muted-foreground block">Disponible:</span>
@@ -978,6 +984,7 @@ const monthlySeries = computed(() => {
                       >
                         {{ formatCurrency(acc.available) }}
                       </span>
+                      <BsHint :value="acc.available" inline />
                     </div>
                   </div>
 
@@ -989,6 +996,7 @@ const monthlySeries = computed(() => {
                     >
                       {{ formatCurrency(acc.fundBalance) }}
                     </span>
+                    <BsHint :value="acc.fundBalance" inline />
                   </div>
                 </div>
               </div>
@@ -1034,6 +1042,7 @@ const monthlySeries = computed(() => {
                 <div class="mt-1 text-base font-bold text-emerald-600 dark:text-emerald-400">
                   {{ formatCurrency(semesterTotals.totalIncome) }}
                 </div>
+                <BsHint :value="semesterTotals.totalIncome" />
                 <div class="text-[11px] text-muted-foreground truncate">
                   Prom. {{ formatCurrency(semesterTotals.avgMonthlyIncome) }}/mes
                 </div>
@@ -1047,6 +1056,7 @@ const monthlySeries = computed(() => {
                 <div class="mt-1 text-base font-bold text-rose-600 dark:text-rose-400">
                   {{ formatCurrency(semesterTotals.totalExpense) }}
                 </div>
+                <BsHint :value="semesterTotals.totalExpense" />
                 <div class="text-[11px] text-muted-foreground truncate">
                   Prom. {{ formatCurrency(semesterTotals.avgMonthlyExpense) }}/mes
                 </div>
@@ -1066,6 +1076,7 @@ const monthlySeries = computed(() => {
                 >
                   {{ semesterTotals.netBalance > 0 ? '+' : '' }}{{ formatCurrency(semesterTotals.netBalance) }}
                 </div>
+                <BsHint :value="semesterTotals.netBalance" />
                 <div class="text-[11px] text-muted-foreground truncate">
                   {{ formatPercentage(semesterTotals.avgSavingsRate) }} tasa de ahorro
                 </div>
@@ -1178,6 +1189,7 @@ const monthlySeries = computed(() => {
                   <div class="text-sm font-bold text-rose-600 dark:text-rose-400">
                     -{{ formatCurrency(expense.amount) }}
                   </div>
+                  <BsHint :value="expense.amount" />
                   <span class="text-[11px] text-muted-foreground">
                     {{ totalExpenses > 0 ? formatPercentage((expense.amount / totalExpenses) * 100) : '0%' }} del total
                   </span>
@@ -1233,11 +1245,14 @@ const monthlySeries = computed(() => {
                     </div>
                   </div>
                 </div>
-                <div
-                  class="text-sm font-bold"
-                  :class="tx.categories?.type === 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
-                >
-                  {{ tx.categories?.type === 1 ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
+                <div class="text-right">
+                  <div
+                    class="text-sm font-bold"
+                    :class="tx.categories?.type === 1 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'"
+                  >
+                    {{ tx.categories?.type === 1 ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
+                  </div>
+                  <BsHint :value="tx.amount" />
                 </div>
               </div>
             </div>
@@ -1268,8 +1283,11 @@ const monthlySeries = computed(() => {
             >
               <div class="flex items-center justify-between">
                 <span class="text-sm font-medium text-foreground">{{ cat.name }}</span>
-                <span class="text-sm font-bold text-rose-600 dark:text-rose-400">
-                  {{ formatCurrency(cat.total) }}
+                <span class="flex flex-col items-end">
+                  <span class="text-sm font-bold text-rose-600 dark:text-rose-400">
+                    {{ formatCurrency(cat.total) }}
+                  </span>
+                  <BsHint :value="cat.total" inline />
                 </span>
               </div>
 

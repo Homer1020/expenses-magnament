@@ -2,7 +2,7 @@ import type { Account } from '@/types'
 import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import DropdownAction from './DataTableDropdown.vue'
-import { formatCurrency } from '@/lib/formatters'
+import { renderAmountCell } from '@/lib/renderAmountCell'
 
 export interface AccountWithMetrics extends Account {
   allocatedBudget: number
@@ -46,7 +46,7 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
     header: periodView === 'month' ? 'Presupuesto Mes' : 'Presupuesto Acumulado',
     cell: ({ row }) => {
       const budget = row.original.allocatedBudget || 0
-      return h('div', { class: 'font-medium' }, formatCurrency(budget))
+      return renderAmountCell(budget, { class: 'font-medium' })
     },
   },
   {
@@ -54,7 +54,7 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
     header: periodView === 'month' ? 'Gastado este Mes' : 'Gastado Acumulado',
     cell: ({ row }) => {
       const spent = row.original.spent || 0
-      return h('div', { class: 'text-rose-500 font-medium' }, formatCurrency(spent))
+      return renderAmountCell(spent, { class: 'text-rose-500 font-medium' })
     },
   },
   {
@@ -63,15 +63,11 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
     cell: ({ row }) => {
       const available = row.original.available || 0
       const isPositive = available >= 0
-      return h(
-        'div',
-        {
-          class: `font-bold ${
-            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-          }`,
-        },
-        formatCurrency(available)
-      )
+      return renderAmountCell(available, {
+        class: `font-bold ${
+          isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+        }`,
+      })
     },
   },
   {
@@ -80,15 +76,11 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
     cell: ({ row }) => {
       const fundBalance = row.original.fundBalance || 0
       const isPositive = fundBalance >= 0
-      return h(
-        'div',
-        {
-          class: `font-bold ${
-            isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-          }`,
-        },
-        formatCurrency(fundBalance)
-      )
+      return renderAmountCell(fundBalance, {
+        class: `font-bold ${
+          isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
+        }`,
+      })
     },
   },
   {

@@ -18,6 +18,7 @@ import SelectItem from '@/components/ui/select/SelectItem.vue'
 import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
 import SelectValue from '@/components/ui/select/SelectValue.vue'
 import { formatCurrency } from '@/lib/formatters'
+import BsHint from '@/components/BsHint.vue'
 import { Wallet, TrendingDown, PiggyBank, Sparkles, Loader2 } from 'lucide-vue-next'
 import { toast } from 'vue-sonner'
 
@@ -166,14 +167,14 @@ const openEdit = (account: Account) => {
 
 <template>
   <div class="space-y-6">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
       <div>
         <h1 class="text-xl font-bold tracking-tight">Presupuestos Mensuales</h1>
         <p class="text-xs text-muted-foreground mt-0.5">
           Distribución porcentual de tus ingresos mensuales y saldos disponibles en tiempo real.
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-2">
         <Select v-model="periodView">
           <SelectTrigger class="w-[150px]">
             <SelectValue placeholder="Periodo" />
@@ -215,6 +216,7 @@ const openEdit = (account: Account) => {
               {{ periodView === 'month' ? 'Ingresos del Mes' : 'Ingresos Acumulados' }}
             </p>
             <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(periodIncome) }}</h3>
+            <BsHint :value="periodIncome" />
           </div>
           <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <PiggyBank class="h-5 w-5" />
@@ -229,6 +231,7 @@ const openEdit = (account: Account) => {
               Total Presupuestado <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
             </p>
             <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(totalAllocated) }}</h3>
+            <BsHint :value="totalAllocated" />
             <span
               class="text-[11px] font-medium"
               :class="totalPercentage === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'"
@@ -249,6 +252,7 @@ const openEdit = (account: Account) => {
               Gastado desde Presupuestos <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
             </p>
             <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ formatCurrency(totalSpent) }}</h3>
+            <BsHint :value="totalSpent" />
           </div>
           <div class="p-2.5 rounded-full bg-rose-500/10 text-rose-500">
             <TrendingDown class="h-5 w-5" />
@@ -268,6 +272,7 @@ const openEdit = (account: Account) => {
             >
               {{ formatCurrency(totalAvailable) }}
             </h3>
+            <BsHint :value="totalAvailable" />
           </div>
           <div class="p-2.5 rounded-full bg-primary/10 text-primary">
             <Wallet class="h-5 w-5" />
@@ -285,6 +290,7 @@ const openEdit = (account: Account) => {
             >
               {{ formatCurrency(totalFundBalance) }}
             </h3>
+            <BsHint :value="totalFundBalance" />
           </div>
           <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <PiggyBank class="h-5 w-5" />

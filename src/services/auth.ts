@@ -18,6 +18,9 @@ export async function updateProfile(metadata: {
   bio?: string
   currency?: string
   avatar_url?: string
+  exchange_rate_source?: 'bcv' | 'manual'
+  manual_exchange_rate?: number
+  show_bs_equivalent?: boolean
 }) {
   const { data, error } = await supabase.auth.updateUser({
     data: metadata,

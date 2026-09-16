@@ -11,7 +11,7 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
-    "@lucide/vue": "^1.41.0",
+    "@lucide/vue": "^1.46.0",
     "@supabase/supabase-js": "^2.49.4",
     "@tailwindcss/vite": "^4.1.4",
     "@tanstack/vue-table": "^8.21.3",

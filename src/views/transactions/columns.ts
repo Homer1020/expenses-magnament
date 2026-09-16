@@ -2,6 +2,7 @@ import type { Transaction } from '@/types'
 import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import DropdownAction from './DataTableDropdown.vue'
+import { renderAmountCell } from '@/lib/renderAmountCell'
 
 interface TableEmits {
   (e: 'edit', transaction: Transaction): void
@@ -21,12 +22,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
     header: () => 'Monto',
     cell: ({ row }) => {
       const amount = Number.parseFloat(row.getValue('amount'))
-      const formatted = new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-      }).format(amount)
-
-      return h('div', formatted)
+      return renderAmountCell(amount)
     },
   },
   {

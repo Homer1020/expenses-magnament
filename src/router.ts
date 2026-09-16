@@ -5,6 +5,7 @@ import Categories from './views/categories/Page.vue'
 import Dashboard from './views/dashboard/Page.vue'
 import Accounts from './views/accounts/Page.vue'
 import Profile from './views/profile/Page.vue'
+import Settings from './views/settings/Page.vue'
 import DashboardLayout from './views/dashboard/Layout.vue'
 import Login from './views/auth/Login.vue'
 import Signup from './views/auth/Signup.vue'
@@ -83,6 +84,16 @@ export const routes = [
           breadcrumb: [
             { title: 'Dashboard', href: '/' },
             { title: 'Mi Perfil' }
+          ]
+        }
+      },
+      {
+        path: 'settings',
+        component: Settings,
+        meta: {
+          breadcrumb: [
+            { title: 'Dashboard', href: '/' },
+            { title: 'Configuración' }
           ]
         }
       },

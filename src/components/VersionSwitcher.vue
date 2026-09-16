@@ -17,7 +17,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar'
-import { ChevronsUpDown, User as UserIcon, LogOut } from 'lucide-vue-next'
+import { ChevronsUpDown, User as UserIcon, LogOut, Settings } from 'lucide-vue-next'
 
 defineProps<{
   versions?: string[]
@@ -89,6 +89,13 @@ onMounted(async () => {
             <RouterLink to="/profile" class="flex items-center gap-2 w-full">
               <UserIcon class="size-4" />
               <span>Mi Perfil</span>
+            </RouterLink>
+          </DropdownMenuItem>
+
+          <DropdownMenuItem as-child class="cursor-pointer">
+            <RouterLink to="/settings" class="flex items-center gap-2 w-full">
+              <Settings class="size-4" />
+              <span>Configuración</span>
             </RouterLink>
           </DropdownMenuItem>
 

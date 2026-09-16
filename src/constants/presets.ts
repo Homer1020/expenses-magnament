@@ -34,6 +34,7 @@ export const PRESET_CURRENCIES: CurrencyOption[] = [
   { code: 'PEN', symbol: 'S/', name: 'PEN - Sol Peruano' },
   { code: 'ARS', symbol: '$', name: 'ARS - Peso Argentino' },
   { code: 'BRL', symbol: 'R$', name: 'BRL - Real Brasileño' },
+  { code: 'VES', symbol: 'Bs', name: 'VES - Bolívar Venezolano' },
 ]
 
 export const PRESET_ACCOUNT_GROUPS: PresetAccountGroup[] = [
