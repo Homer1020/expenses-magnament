@@ -43,6 +43,14 @@ const data = {
           title: 'Presupuestos',
           url: '/accounts',
         },
+        {
+          title: 'Metas de Gasto',
+          url: '/budgets',
+        },
+        {
+          title: 'Recurrentes',
+          url: '/recurring',
+        },
       ],
     },
   ],

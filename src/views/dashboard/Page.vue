@@ -9,6 +9,7 @@ import { RouterLink } from 'vue-router'
 import * as transactionsService from '@/services/transactions'
 import * as categoriesService from '@/services/categories'
 import * as accountsService from '@/services/accounts'
+import * as recurringTransactionsService from '@/services/recurringTransactions'
 import type { Transaction, TransactionCategory, Account } from '@/types'
 import { formatCurrency, formatCurrencyWithBs, formatPercentage, formatShortDate } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
@@ -163,7 +164,12 @@ const fetchDashboardData = async (isRefresh = false) => {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    await recurringTransactionsService.generateDueTransactions()
+  } catch (err) {
+    console.error('Error generating due recurring transactions:', err)
+  }
   fetchDashboardData()
 })
 

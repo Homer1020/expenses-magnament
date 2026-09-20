@@ -3,7 +3,7 @@
 -- ==============================================================================
 
 -- 1. LIMPIEZA DE TABLAS Y REINICIO DE IDS
-TRUNCATE TABLE transactions, accounts, categories RESTART IDENTITY CASCADE;
+TRUNCATE TABLE transactions, budget_goals, recurring_transactions, accounts, categories RESTART IDENTITY CASCADE;
 
 -- 2. INSERCIÓN DE DATOS VINCULADOS A TU USER_ID
 DO $$
@@ -67,6 +67,32 @@ BEGIN
     ('Fondo de Emergencia', 10, target_user_id),
     ('Educación y Desarrollo', 5, target_user_id)
   ON CONFLICT DO NOTHING;
+
+  -- ==========================================================================
+  -- C. METAS DE GASTO (límite mensual por categoría de egreso)
+  -- ==========================================================================
+  INSERT INTO budget_goals (category_id, amount, user_id)
+  SELECT c.id, g.amount, target_user_id
+  FROM (VALUES
+    ('Alimentación y Supermercado', 400),
+    ('Transporte y Combustible', 150),
+    ('Entretenimiento y Salidas', 100),
+    ('Servicios Básicos (Luz, Agua, Internet)', 120)
+  ) AS g(category_name, amount)
+  JOIN categories c ON c.name = g.category_name AND c.user_id = target_user_id
+  ON CONFLICT DO NOTHING;
+
+  -- ==========================================================================
+  -- D. TRANSACCIONES RECURRENTES (plantillas de ingresos/gastos fijos)
+  -- ==========================================================================
+  INSERT INTO recurring_transactions (amount, description, category_id, frequency, start_date, next_run_date, active, user_id)
+  SELECT r.amount, r.description, c.id, r.frequency, date_trunc('month', now())::date, date_trunc('month', now())::date, true, target_user_id
+  FROM (VALUES
+    ('Salario / Sueldo', 1200, 'Nómina mensual', 'monthly'),
+    ('Suscripciones y Software', 15, 'Streaming y software', 'monthly'),
+    ('Vivienda y Alquiler', 350, 'Alquiler mensual', 'monthly')
+  ) AS r(category_name, amount, description, frequency)
+  JOIN categories c ON c.name = r.category_name AND c.user_id = target_user_id;
 
   RAISE NOTICE '✅ Seeder completado con éxito para el usuario: %', target_user_id;
 END $$;

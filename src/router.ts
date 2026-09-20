@@ -4,6 +4,8 @@ import Transactions from './views/transactions/Page.vue'
 import Categories from './views/categories/Page.vue'
 import Dashboard from './views/dashboard/Page.vue'
 import Accounts from './views/accounts/Page.vue'
+import Budgets from './views/budgets/Page.vue'
+import Recurring from './views/recurring/Page.vue'
 import Profile from './views/profile/Page.vue'
 import Settings from './views/settings/Page.vue'
 import DashboardLayout from './views/dashboard/Layout.vue'
@@ -74,6 +76,26 @@ export const routes = [
           breadcrumb: [
             { title: 'Dashboard', href: '/' },
             { title: 'Categorías' }
+          ]
+        }
+      },
+      {
+        path: 'budgets',
+        component: Budgets,
+        meta: {
+          breadcrumb: [
+            { title: 'Dashboard', href: '/' },
+            { title: 'Metas de Gasto' }
+          ]
+        }
+      },
+      {
+        path: 'recurring',
+        component: Recurring,
+        meta: {
+          breadcrumb: [
+            { title: 'Dashboard', href: '/' },
+            { title: 'Recurrentes' }
           ]
         }
       },

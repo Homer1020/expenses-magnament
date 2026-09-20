@@ -34,3 +34,31 @@ export interface Account {
   created_at?: string,
   user_id: string
 }
+
+export interface BudgetGoal {
+  id: number
+  category_id: number
+  categories?: TransactionCategory | null
+  amount: number
+  created_at?: string
+  user_id: string
+}
+
+export type RecurringFrequency = 'weekly' | 'monthly' | 'yearly'
+
+export interface RecurringTransaction {
+  id: number
+  amount: number
+  description: string
+  category_id: number
+  categories?: TransactionCategory | null
+  account_id?: number | null
+  accounts?: Account | null
+  frequency: RecurringFrequency
+  start_date: string
+  next_run_date: string
+  last_generated_at?: string | null
+  active: boolean
+  created_at?: string
+  user_id: string
+}
