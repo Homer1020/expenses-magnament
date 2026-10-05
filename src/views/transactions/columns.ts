@@ -5,6 +5,7 @@ import DropdownAction from './DataTableDropdown.vue'
 import { renderAmountCell } from '@/lib/renderAmountCell'
 
 interface TableEmits {
+  (e: 'view', transaction: Transaction): void
   (e: 'edit', transaction: Transaction): void
   (e: 'delete'): void
 }
@@ -64,6 +65,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
 
       return h('div', { class: 'relative' }, h(DropdownAction, {
         transaction,
+        onView: () => emit('view', transaction),
         onEdit: () => emit('edit', transaction),
         onDelete: () => emit('delete'),
       }))

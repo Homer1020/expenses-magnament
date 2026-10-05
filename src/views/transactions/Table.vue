@@ -22,6 +22,7 @@ const {
 } = defineProps<{transactions: Transaction[], dateFilters: any}>()
 
 const emit = defineEmits<{
+  (e: 'view', transaction: Transaction): void
   (e: 'edit', transaction: Transaction): void
   (e: 'delete'): void
   (e: 'updatedFilters', dateRage: DateRange): void
@@ -90,8 +91,14 @@ const updateFilters = (dateRange: DateRange) => {
       <TableBody>
         <template v-if="table.getRowModel().rows?.length">
           <TableRow v-for="row in table.getRowModel().rows" :key="row.id"
-            :data-state="row.getIsSelected() ? 'selected' : undefined">
-            <TableCell v-for="cell in row.getVisibleCells()" :key="cell.id">
+            class="cursor-pointer"
+            :data-state="row.getIsSelected() ? 'selected' : undefined"
+            @click="emit('view', row.original)">
+            <TableCell
+              v-for="cell in row.getVisibleCells()"
+              :key="cell.id"
+              @click="cell.column.id === 'actions' && $event.stopPropagation()"
+            >
               <FlexRender :render="cell.column.columnDef.cell" :props="cell.getContext()" />
             </TableCell>
           </TableRow>

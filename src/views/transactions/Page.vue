@@ -6,6 +6,7 @@ import * as transactionsService from '@/services/transactions'
 import Table from './Table.vue'
 import Button from '@/components/ui/button/Button.vue'
 import Create from './Create.vue'
+import Details from './Details.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
@@ -90,9 +91,13 @@ const openCreate = () => {
 }
 
 const openEdit = (transaction: Transaction) => {
+  viewingTransaction.value = null
   editingTransaction.value = transaction
   open.value = true
 }
+
+const viewingTransaction = ref<Transaction | null>(null)
+const detailsOpen = computed(() => viewingTransaction.value !== null)
 
 const updateFilters = async (dateRange: DateRange) => {
   try {
@@ -212,12 +217,20 @@ const updateFilters = async (dateRange: DateRange) => {
       <Table
         :transactions="transactions"
         :date-filters="dateFilters!"
+        @view="viewingTransaction = $event"
         @edit="openEdit"
         @delete="fetchTransactions"
         @updatedFilters="updateFilters"
       />
     </div>
   </div>
+
+  <Details
+    :open="detailsOpen"
+    :transaction="viewingTransaction"
+    @close="viewingTransaction = null"
+    @edit="openEdit"
+  />
 
   <Create
     :open="open"

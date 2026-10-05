@@ -10,7 +10,7 @@ defineProps<{
   transaction: Transaction
 }>()
 
-const emit = defineEmits(['edit', 'delete'])
+const emit = defineEmits(['view', 'edit', 'delete'])
 
 const deleteTransaction = async (id: number) => {
   try {
@@ -35,6 +35,7 @@ const deleteTransaction = async (id: number) => {
       </Button>
     </DropdownMenuTrigger>
     <DropdownMenuContent align="end">
+      <DropdownMenuItem @click="emit('view')">Ver detalles</DropdownMenuItem>
       <DropdownMenuItem @click="emit('edit')">Editar</DropdownMenuItem>
       <DropdownMenuItem @click="() => deleteTransaction(transaction.id)">Eliminar</DropdownMenuItem>
     </DropdownMenuContent>

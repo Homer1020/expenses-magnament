@@ -79,9 +79,10 @@ export const update = async (
     })
     .eq('id', id)
     .select(transactionSelect)
-    .single();
+    .maybeSingle();
 
   if (error) throw error;
+  if (!data) throw new Error('No se pudo actualizar la transacción (no existe o no tienes permiso)');
   return data;
 };
 
