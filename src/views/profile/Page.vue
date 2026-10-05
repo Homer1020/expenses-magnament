@@ -15,6 +15,16 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { resetAccount } from '@/services/auth'
 
 import {
   User as UserIcon,
@@ -26,6 +36,7 @@ import {
   Save,
   ShieldCheck,
   Loader2,
+  Trash2,
 } from 'lucide-vue-next'
 
 // State
@@ -142,6 +153,31 @@ const handleUpdatePassword = async () => {
     })
   } finally {
     savingPassword.value = false
+  }
+}
+
+// Reset account
+const RESET_PHRASE = 'RESETEAR'
+const resetOpen = ref(false)
+const resetConfirm = ref('')
+const resetting = ref(false)
+
+const handleResetAccount = async () => {
+  if (resetConfirm.value !== RESET_PHRASE) return
+
+  resetting.value = true
+  try {
+    await resetAccount()
+    toast.success('Cuenta reestablecida a cero')
+    resetOpen.value = false
+    resetConfirm.value = ''
+  } catch (error: any) {
+    console.error('Error al reestablecer la cuenta:', error)
+    toast.error('Error al reestablecer la cuenta', {
+      description: error?.message || 'Ocurrió un problema inesperado',
+    })
+  } finally {
+    resetting.value = false
   }
 }
 
@@ -315,6 +351,52 @@ onMounted(() => {
           </form>
         </CardContent>
       </Card>
+
+      <!-- 3. ZONA DE PELIGRO -->
+      <Card class="border border-destructive/40 shadow-xs gap-0 py-0 lg:col-span-2 overflow-hidden">
+        <CardContent class="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <div class="rounded-md bg-destructive/10 p-2 text-destructive shrink-0">
+              <Trash2 class="h-5 w-5" />
+            </div>
+            <div class="space-y-0.5">
+              <h2 class="text-base font-semibold text-destructive">Zona de Peligro</h2>
+              <p class="text-sm text-muted-foreground">
+                Elimina todas tus transacciones, recurrentes y metas de gasto. Tus categorías y cuentas se conservan.
+              </p>
+            </div>
+          </div>
+          <Button variant="destructive" class="gap-1.5 shrink-0" @click="resetOpen = true">
+            <Trash2 class="h-4 w-4" />
+            Reestablecer cuenta a cero
+          </Button>
+        </CardContent>
+      </Card>
     </div>
+
+    <AlertDialog v-model:open="resetOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Reestablecer la cuenta a cero?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción es permanente y no se puede deshacer. Escribe
+            <strong>{{ RESET_PHRASE }}</strong> para confirmar.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Input v-model="resetConfirm" :placeholder="RESET_PHRASE" autocomplete="off" />
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="resetting" @click="resetConfirm = ''">Cancelar</AlertDialogCancel>
+          <Button
+            variant="destructive"
+            :disabled="resetConfirm !== RESET_PHRASE || resetting"
+            class="gap-1.5"
+            @click="handleResetAccount"
+          >
+            <Loader2 v-if="resetting" class="h-4 w-4 animate-spin" />
+            <span>{{ resetting ? 'Reestableciendo...' : 'Reestablecer' }}</span>
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

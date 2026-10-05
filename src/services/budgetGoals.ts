@@ -28,9 +28,12 @@ export const getAll = async (): Promise<BudgetGoal[]> => {
 export const create = async (
   goal: Pick<BudgetGoal, 'category_id' | 'amount'>
 ): Promise<BudgetGoal> => {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Usuario no autenticado');
+
   const { data, error } = await supabase
     .from('budget_goals')
-    .insert(goal)
+    .insert({ ...goal, user_id: user.id })
     .select(budgetGoalSelect)
     .single();
 

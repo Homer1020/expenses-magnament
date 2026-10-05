@@ -39,6 +39,11 @@ export async function updatePassword(password: string) {
   return data
 }
 
+export async function resetAccount() {
+  const { error } = await supabase.rpc('reset_my_data')
+  if (error) throw error
+}
+
 export async function signOut() {
   const result = await supabase.auth.signOut()
   if (!result.error) router.push({ path: '/login', replace: true })

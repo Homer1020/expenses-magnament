@@ -10,7 +10,9 @@ import Profile from './views/profile/Page.vue'
 import Settings from './views/settings/Page.vue'
 import DashboardLayout from './views/dashboard/Layout.vue'
 import Login from './views/auth/Login.vue'
-import Signup from './views/auth/Signup.vue'
+// import Signup from './views/auth/Signup.vue'
+import ForgotPassword from './views/auth/ForgotPassword.vue'
+import ResetPassword from './views/auth/ResetPassword.vue'
 import Onboarding from './views/onboarding/Page.vue'
 import NotFound from './views/NotFound.vue'
 import supabase from './lib/supabase'
@@ -125,9 +127,19 @@ export const routes = [
     path: '/login',
     component: Login
   },
+  // Registro deshabilitado
+  // {
+  //   path: '/signup',
+  //   component: Signup
+  // },
   {
-    path: '/signup',
-    component: Signup
+    path: '/forgot-password',
+    component: ForgotPassword
+  },
+  {
+    // Accesible con sesión activa: el enlace de recuperación crea una sesión temporal
+    path: '/reset-password',
+    component: ResetPassword
   },
   {
     path: '/:pathMatch(.*)*',
@@ -150,7 +162,7 @@ router.beforeEach(async (to, _, next) => {
 
   if (requiresAuth && !user) {
     next('/login')
-  } else if ((to.path === '/login' || to.path === '/signup') && user) {
+  } else if ((to.path === '/login' || to.path === '/forgot-password') && user) {
     next('/')
   } else {
     next()

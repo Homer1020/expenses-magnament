@@ -74,12 +74,12 @@ const handleLogin = async () => {
               <div class="grid gap-3">
                 <div class="flex items-center">
                   <Label for="password">Password</Label>
-                  <a
-                    href="#"
+                  <RouterLink
+                    to="/forgot-password"
                     class="ml-auto inline-block text-sm underline-offset-4 hover:underline"
                   >
                     Forgot your password?
-                  </a>
+                  </RouterLink>
                 </div>
                 <Input id="password" type="password" required v-model="form.password" />
               </div>
@@ -92,12 +92,15 @@ const handleLogin = async () => {
                 </Button>
               </div>
             </div>
+            <!-- Registro deshabilitado
             <div class="mt-4 text-center text-sm">
               Don't have an account?
               <RouterLink to="/signup" class="underline underline-offset-4">
                 Sign up
               </RouterLink>
             </div>
+            -->
+
           </form>
         </CardContent>
       </Card>
