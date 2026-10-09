@@ -50,7 +50,7 @@ const amount = computed(() => Number(props.transaction?.amount) || 0)
           >
             {{ isIncome ? '+' : '-' }}{{ formatCurrency(amount) }}
           </span>
-          <BsHint :value="amount" class="!mt-0" />
+          <BsHint :value="amount" :exact-bs="transaction.bs_amount" class="!mt-0" />
           <span class="text-xs font-medium text-muted-foreground">{{ isIncome ? 'Ingreso' : 'Egreso' }}</span>
         </div>
 

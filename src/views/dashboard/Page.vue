@@ -1195,7 +1195,7 @@ const monthlySeries = computed(() => {
                   <div class="text-sm font-bold text-rose-600 dark:text-rose-400">
                     -{{ formatCurrency(expense.amount) }}
                   </div>
-                  <BsHint :value="expense.amount" />
+                  <BsHint :value="expense.amount" :exact-bs="expense.bs_amount" />
                   <span class="text-[11px] text-muted-foreground">
                     {{ totalExpenses > 0 ? formatPercentage((expense.amount / totalExpenses) * 100) : '0%' }} del total
                   </span>
@@ -1258,7 +1258,7 @@ const monthlySeries = computed(() => {
                   >
                     {{ tx.categories?.type === 1 ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
                   </div>
-                  <BsHint :value="tx.amount" />
+                  <BsHint :value="tx.amount" :exact-bs="tx.bs_amount" />
                 </div>
               </div>
             </div>

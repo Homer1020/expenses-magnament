@@ -23,7 +23,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
     header: () => 'Monto',
     cell: ({ row }) => {
       const amount = Number.parseFloat(row.getValue('amount'))
-      return renderAmountCell(amount)
+      return renderAmountCell(amount, { exactBs: row.original.bs_amount })
     },
   },
   {

@@ -9,6 +9,7 @@ export interface TransactionCategory {
 export interface Transaction {
   id: number
   amount: number
+  bs_amount?: number | null
   description: string
   created_at: string
   user_id: string

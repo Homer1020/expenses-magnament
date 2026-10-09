@@ -21,6 +21,7 @@ export interface TransactionFilters {
 
 export interface TransactionInput {
   amount: number
+  bs_amount?: number | null
   description?: string
   category_id: number
   account_id?: number | null
@@ -52,6 +53,7 @@ export const create = async (input: TransactionInput): Promise<Transaction> => {
     .from('transactions')
     .insert({
       amount: input.amount,
+      bs_amount: input.bs_amount ?? null,
       description: input.description ?? '',
       category_id: input.category_id,
       account_id: input.account_id ?? null,
@@ -67,12 +69,13 @@ export const create = async (input: TransactionInput): Promise<Transaction> => {
 
 export const update = async (
   id: number,
-  input: Pick<TransactionInput, 'amount' | 'description' | 'category_id' | 'account_id'>
+  input: Pick<TransactionInput, 'amount' | 'bs_amount' | 'description' | 'category_id' | 'account_id'>
 ): Promise<Transaction> => {
   const { data, error } = await supabase
     .from('transactions')
     .update({
       amount: input.amount,
+      bs_amount: input.bs_amount ?? null,
       description: input.description ?? '',
       category_id: input.category_id,
       account_id: input.account_id ?? null,

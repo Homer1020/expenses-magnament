@@ -13,6 +13,8 @@ import FormItem from '@/components/ui/form/FormItem.vue'
 import FormLabel from '@/components/ui/form/FormLabel.vue'
 import FormMessage from '@/components/ui/form/FormMessage.vue'
 import Input from '@/components/ui/input/Input.vue'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
 import Select from '@/components/ui/select/Select.vue'
 import SelectContent from '@/components/ui/select/SelectContent.vue'
 import SelectGroup from '@/components/ui/select/SelectGroup.vue'
@@ -45,8 +47,14 @@ const { open, hide, transaction } = defineProps<{
 
 const isEditing = computed(() => !!transaction)
 
-const { currency } = useSettings()
-const amountLabel = computed(() => `Monto (${currency.value})`)
+const { currency, effectiveRate } = useSettings()
+
+// "Monto en Bs": el usuario escribe Bs; `amount` (moneda global) se deriva con la tasa vigente.
+const inBs = ref(false)
+const canUseBs = computed(() => currency.value !== 'VES' && effectiveRate.value !== null)
+const amountLabel = computed(() => (inBs.value ? 'Monto (Bs)' : `Monto (${currency.value})`))
+
+const toUsd = (bs: number) => Math.round((bs / effectiveRate.value!) * 100) / 100
 
 const formSchema = toTypedSchema(z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
@@ -82,6 +90,12 @@ const showAccountField = computed(() => {
   return values.type !== undefined && accounts.value.length > 0
 })
 
+// Monto equivalente en la moneda global, venga o no digitado en Bs
+const usdAmount = computed(() => {
+  const typed = Number(values.amount) || 0
+  return inBs.value && effectiveRate.value ? toUsd(typed) : typed
+})
+
 // Calculate monthly income and account live calculations
 const monthlyIncome = computed(() => {
   return currentMonthTransactions.value
@@ -94,7 +108,7 @@ const selectedAccountData = computed(() => {
   const acc = accounts.value.find((a) => a.id === values.account)
   if (!acc) return null
 
-  const currentAmount = Number(values.amount) || 0
+  const currentAmount = usdAmount.value
 
   if (values.type === 1) {
     // Ingreso: saldo acumulado histórico del fondo (ingresos - egresos asignados)
@@ -167,14 +181,16 @@ watch(() => open, async (isOpen) => {
 
   isSyncingForm.value = true
   if (transaction) {
+    inBs.value = !!transaction.bs_amount
     setValues({
       type: transaction.categories?.type,
       category: transaction.category_id,
       account: transaction.account_id ?? null,
-      amount: transaction.amount,
+      amount: transaction.bs_amount ?? transaction.amount,
       description: transaction.description ?? '',
     })
   } else {
+    inBs.value = false
     resetForm({ values: { type: undefined, category: undefined, account: null, amount: undefined, description: '' } })
   }
   await nextTick()
@@ -189,13 +205,43 @@ watch(() => values.type, (newType, oldType) => {
   }
 })
 
+// Al alternar el check, convierte el monto digitado para no perderlo
+const onToggleBs = (checked: boolean) => {
+  const typed = Number(values.amount) || 0
+  if (typed > 0 && effectiveRate.value) {
+    const converted = checked ? typed * effectiveRate.value : typed / effectiveRate.value
+    setFieldValue('amount', Math.round(converted * 100) / 100)
+  }
+  inBs.value = checked
+}
+
 const onSubmit = handleSubmit(async (formValues) => {
   try {
     const accountId = formValues.account ? Number(formValues.account) : null
 
+    let amount = formValues.amount!
+    let bsAmount: number | null = null
+    if (inBs.value) {
+      bsAmount = formValues.amount!
+      // Si no cambió el Bs de una transacción existente, conserva su monto original
+      if (transaction?.bs_amount === bsAmount) {
+        amount = transaction.amount
+      } else if (effectiveRate.value) {
+        amount = toUsd(bsAmount)
+      } else {
+        toast.error('No hay tasa de cambio disponible para convertir los Bs')
+        return
+      }
+      if (amount <= 0) {
+        toast.error('El monto en Bs es demasiado pequeño para la tasa actual')
+        return
+      }
+    }
+
     if (isEditing.value && transaction) {
       await transactionsService.update(transaction.id, {
-        amount: formValues.amount!,
+        amount,
+        bs_amount: bsAmount,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
@@ -211,7 +257,8 @@ const onSubmit = handleSubmit(async (formValues) => {
       }
 
       await transactionsService.create({
-        amount: formValues.amount!,
+        amount,
+        bs_amount: bsAmount,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
@@ -413,10 +460,25 @@ const onSubmit = handleSubmit(async (formValues) => {
             <FormControl>
               <Input type="number" step="0.01" placeholder="80.00" v-bind="componentField" />
             </FormControl>
-            <BsHint v-if="Number(values.amount) > 0" :value="Number(values.amount)" />
+            <span
+              v-if="inBs && usdAmount > 0"
+              class="block text-[11px] text-muted-foreground mt-0.5"
+            >
+              ≈ {{ formatCurrency(usdAmount) }}
+            </span>
+            <BsHint v-else-if="!inBs && Number(values.amount) > 0" :value="Number(values.amount)" />
             <FormMessage />
           </FormItem>
         </FormField>
+
+        <!-- Monto en Bs -->
+        <div v-if="canUseBs || inBs" class="flex items-center justify-between rounded-lg border p-2.5">
+          <div class="space-y-0.5">
+            <Label for="amount-in-bs" class="text-sm">Monto en Bs</Label>
+            <p class="text-[11px] text-muted-foreground">Úsalo si pagaste o recibiste directamente en bolívares</p>
+          </div>
+          <Switch id="amount-in-bs" :model-value="inBs" :disabled="!canUseBs && !inBs" @update:model-value="onToggleBs(!!$event)" />
+        </div>
 
         <!-- Descripción -->
         <FormField v-slot="{ componentField }" name="description">
