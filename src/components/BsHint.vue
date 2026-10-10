@@ -27,9 +27,10 @@ const formatted = computed(() => (bsAmount.value === null ? null : formatCurrenc
 <template>
   <span
     v-if="formatted"
-    :class="inline
-      ? 'text-[11px] text-muted-foreground ml-1'
-      : 'block text-[11px] text-muted-foreground mt-0.5'"
+    :class="[
+      inline ? 'text-[11px] ml-1' : 'block text-[11px] mt-0.5',
+      isExact ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground',
+    ]"
   >
     {{ isExact ? '' : '≈ ' }}{{ formatted }}
   </span>

@@ -56,6 +56,16 @@ const amountLabel = computed(() => (inBs.value ? 'Monto (Bs)' : `Monto (${curren
 
 const toUsd = (bs: number) => Math.round((bs / effectiveRate.value!) * 100) / 100
 
+// Equivalente real opcional (ej. lo que costó en Binance/PayPal); vacío = tasa del sistema
+const realAmount = ref<number | null>(null)
+const hadCustomReal = ref(false)
+const implicitRate = computed(() => {
+  const bs = Number(values.amount) || 0
+  return inBs.value && realAmount.value && realAmount.value > 0 && bs > 0
+    ? bs / realAmount.value
+    : null
+})
+
 const formSchema = toTypedSchema(z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   description: z.string().max(100).optional(),
@@ -93,7 +103,9 @@ const showAccountField = computed(() => {
 // Monto equivalente en la moneda global, venga o no digitado en Bs
 const usdAmount = computed(() => {
   const typed = Number(values.amount) || 0
-  return inBs.value && effectiveRate.value ? toUsd(typed) : typed
+  if (!inBs.value) return typed
+  if (realAmount.value && realAmount.value > 0) return realAmount.value
+  return effectiveRate.value ? toUsd(typed) : typed
 })
 
 // Calculate monthly income and account live calculations
@@ -182,6 +194,12 @@ watch(() => open, async (isOpen) => {
   isSyncingForm.value = true
   if (transaction) {
     inBs.value = !!transaction.bs_amount
+    // Precarga el equivalente solo si difiere del calculado con la tasa del sistema
+    realAmount.value =
+      transaction.bs_amount && effectiveRate.value && transaction.amount !== toUsd(transaction.bs_amount)
+        ? transaction.amount
+        : null
+    hadCustomReal.value = realAmount.value !== null
     setValues({
       type: transaction.categories?.type,
       category: transaction.category_id,
@@ -191,6 +209,8 @@ watch(() => open, async (isOpen) => {
     })
   } else {
     inBs.value = false
+    realAmount.value = null
+    hadCustomReal.value = false
     resetForm({ values: { type: undefined, category: undefined, account: null, amount: undefined, description: '' } })
   }
   await nextTick()
@@ -213,6 +233,7 @@ const onToggleBs = (checked: boolean) => {
     setFieldValue('amount', Math.round(converted * 100) / 100)
   }
   inBs.value = checked
+  if (!checked) realAmount.value = null
 }
 
 const onSubmit = handleSubmit(async (formValues) => {
@@ -223,8 +244,10 @@ const onSubmit = handleSubmit(async (formValues) => {
     let bsAmount: number | null = null
     if (inBs.value) {
       bsAmount = formValues.amount!
-      // Si no cambió el Bs de una transacción existente, conserva su monto original
-      if (transaction?.bs_amount === bsAmount) {
+      if (realAmount.value && realAmount.value > 0) {
+        amount = Math.round(realAmount.value * 100) / 100
+      } else if (transaction?.bs_amount === bsAmount && !hadCustomReal.value) {
+        // Si no cambió el Bs de una transacción existente, conserva su monto original
         amount = transaction.amount
       } else if (effectiveRate.value) {
         amount = toUsd(bsAmount)
@@ -465,6 +488,7 @@ const onSubmit = handleSubmit(async (formValues) => {
               class="block text-[11px] text-muted-foreground mt-0.5"
             >
               ≈ {{ formatCurrency(usdAmount) }}
+              <template v-if="implicitRate">· tasa real {{ implicitRate.toFixed(2) }} Bs</template>
             </span>
             <BsHint v-else-if="!inBs && Number(values.amount) > 0" :value="Number(values.amount)" />
             <FormMessage />
@@ -478,6 +502,23 @@ const onSubmit = handleSubmit(async (formValues) => {
             <p class="text-[11px] text-muted-foreground">Úsalo si pagaste o recibiste directamente en bolívares</p>
           </div>
           <Switch id="amount-in-bs" :model-value="inBs" :disabled="!canUseBs && !inBs" @update:model-value="onToggleBs(!!$event)" />
+        </div>
+
+        <!-- Equivalente real (opcional, solo si el monto es en Bs) -->
+        <div v-if="inBs" class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <Label for="real-amount">Equivalente en {{ currency }}</Label>
+            <span class="text-xs text-muted-foreground font-normal">Opcional</span>
+          </div>
+          <Input
+            id="real-amount"
+            type="number"
+            step="0.01"
+            placeholder="Vacío = tasa del sistema"
+            :model-value="realAmount ?? ''"
+            @update:model-value="realAmount = $event === '' ? null : Number($event)"
+          />
+          <p class="text-[11px] text-muted-foreground">Si pagaste con otra tasa (Binance, etc.), escribe cuánto te costó realmente.</p>
         </div>
 
         <!-- Descripción -->
