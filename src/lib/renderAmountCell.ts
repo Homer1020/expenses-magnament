@@ -1,4 +1,4 @@
-import { h } from 'vue'
+import { h, type Component } from 'vue'
 import { formatCurrency } from '@/lib/formatters'
 import { useSettings } from '@/composables/useSettings'
 
@@ -8,6 +8,8 @@ interface RenderAmountCellOptions {
   currency?: string
   /** Monto exacto en Bs guardado; reemplaza la estimación. */
   exactBs?: number | null
+  /** Icono (componente) que se muestra antes del monto. */
+  icon?: Component
 }
 
 /**
@@ -20,7 +22,10 @@ export function renderAmountCell(amount: number, options: RenderAmountCellOption
   const bs = isExact ? options.exactBs! : bsEquivalenceEnabled.value ? convertToBs(amount) : null
 
   return h('div', [
-    h('div', { class: options.class }, formatCurrency(amount, options.currency)),
+    h('div', { class: ['flex items-center gap-1', options.class] }, [
+      options.icon ? h(options.icon, { class: 'size-3.5 shrink-0' }) : null,
+      formatCurrency(amount, options.currency),
+    ]),
     bs !== null
       ? h('div', { class: options.bsClass || 'text-[11px] text-muted-foreground font-normal' }, `${isExact ? '' : '≈ '}${formatCurrency(bs, 'VES')}`)
       : null,

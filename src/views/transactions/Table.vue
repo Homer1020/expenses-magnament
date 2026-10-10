@@ -11,7 +11,8 @@ import type { Transaction } from '@/types';
 import { columns } from './columns';
 import { FlexRender, getCoreRowModel, useVueTable, getPaginationRowModel, type ColumnFiltersState, getFilteredRowModel } from '@tanstack/vue-table';
 import Button from '@/components/ui/button/Button.vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input';
 import TablePicker from './TablePicker.vue';
 import type { DateRange } from 'reka-ui';
@@ -37,6 +38,9 @@ const table = useVueTable({
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
+  initialState: {
+    columnVisibility: { category_type: false },
+  },
   state: {
     get columnFilters() {
       return columnFilters.value
@@ -59,7 +63,12 @@ const table = useVueTable({
   },
 })
 
-const updateFilters = (dateRange: DateRange) => {
+const typeFilter = ref('all')
+watch(typeFilter, (value) => {
+  table.getColumn('category_type')?.setFilterValue(value === 'all' ? undefined : value)
+})
+
+const updateFilters =(dateRange: DateRange) => {
   emit('updatedFilters', dateRange)
 }
 
@@ -72,6 +81,17 @@ const updateFilters = (dateRange: DateRange) => {
       v-model="globalFilter"
       class="w-full lg:w-[280px]"
       />
+
+    <Select v-model="typeFilter">
+      <SelectTrigger class="w-full lg:w-[160px]">
+        <SelectValue placeholder="Tipo" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todos</SelectItem>
+        <SelectItem value="Ingreso">Ingresos</SelectItem>
+        <SelectItem value="Egreso">Egresos</SelectItem>
+      </SelectContent>
+    </Select>
 
     <TablePicker
       :modelValue="dateFilters"

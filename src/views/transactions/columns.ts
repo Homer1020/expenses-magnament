@@ -1,6 +1,7 @@
 import type { Transaction } from '@/types'
 import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
+import { ArrowUpRight, ArrowDownLeft } from 'lucide-vue-next'
 import DropdownAction from './DataTableDropdown.vue'
 import { renderAmountCell } from '@/lib/renderAmountCell'
 
@@ -19,11 +20,30 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
     }
   },
   {
+    accessorKey: 'description',
+    header: 'Concepto',
+    cell: ({ row }) => {
+      const description = row.original.description?.trim()
+      return h(
+        'div',
+        { class: description ? 'max-w-[200px] truncate' : 'text-muted-foreground' },
+        description || '—'
+      )
+    },
+  },
+  {
     accessorKey: 'amount',
     header: () => 'Monto',
     cell: ({ row }) => {
       const amount = Number.parseFloat(row.getValue('amount'))
-      return renderAmountCell(amount, { exactBs: row.original.bs_amount })
+      const isIncome = !!row.original.categories.type
+      return renderAmountCell(amount, {
+        exactBs: row.original.bs_amount,
+        icon: isIncome ? ArrowUpRight : ArrowDownLeft,
+        class: isIncome
+          ? 'font-medium text-green-600 dark:text-green-500'
+          : 'font-medium text-red-600 dark:text-red-500',
+      })
     },
   },
   {
@@ -36,6 +56,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
     accessorKey: 'category_type',
     header: 'Tipo',
     cell: ({ row }) => h('div', row.getValue('category_type')),
+    filterFn: 'equalsString',
     accessorFn: (row) => row.categories.type ? 'Ingreso' : 'Egreso'
   },
   {
