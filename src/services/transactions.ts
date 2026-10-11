@@ -33,7 +33,7 @@ export const getAll = async (filters?: TransactionFilters): Promise<Transaction[
   let query = supabase
     .from('transactions')
     .select(transactionSelect)
-    .order('date', { ascending: false });
+    .order('created_at', { ascending: false });
 
   if (filters?.startISO) {
     query = query.gte('date', filters.startISO);
@@ -43,6 +43,8 @@ export const getAll = async (filters?: TransactionFilters): Promise<Transaction[
   }
 
   const { data, error } = await query;
+
+  console.log({data});
 
   if (error) throw error;
   return data ?? [];

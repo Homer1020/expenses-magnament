@@ -13,10 +13,16 @@ interface TableEmits {
 
 export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
   {
-    accessorKey: 'date',
+    accessorKey: 'created_at',
     header: 'Fecha',
     cell: ({row}) => {
-      return h('div', row.getValue('date'))
+
+      const createdAt = new Date(row.getValue('created_at'));
+
+      // conertir a mi zona horaria local
+      const localCreatedAt = new Date(createdAt.getTime() - createdAt.getTimezoneOffset() * 60000);
+
+      return h('div', `${localCreatedAt.toISOString().split('T')[0]}`)
     }
   },
   {
