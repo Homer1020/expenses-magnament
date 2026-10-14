@@ -13,7 +13,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
 import { toast } from 'vue-sonner'
-import { Sparkles, Loader2, Tags, TrendingDown, TrendingUp, PieChart, Plus } from 'lucide-vue-next'
+import { Sparkles, Loader2, Tags, TrendingDown, TrendingUp, PieChart, Plus, Eye, EyeOff } from 'lucide-vue-next'
+import { useCardsVisibility } from '@/composables/useCardsVisibility'
+
+const showCards = useCardsVisibility('categories')
 
 const categories = ref<TransactionCategory[]>([])
 const transactions = ref<Transaction[]>([])
@@ -152,6 +155,16 @@ const openEdit = (category: TransactionCategory) => {
       </div>
       <div class="flex flex-wrap items-center gap-2">
         <Button
+          variant="outline"
+          class="gap-1.5"
+          :title="showCards ? 'Ocultar resumen' : 'Mostrar resumen'"
+          @click="showCards = !showCards"
+        >
+          <EyeOff v-if="showCards" class="h-4 w-4" />
+          <Eye v-else class="h-4 w-4" />
+          <span class="hidden sm:inline">{{ showCards ? 'Ocultar resumen' : 'Mostrar resumen' }}</span>
+        </Button>
+        <Button
           v-if="!loading && categories.length === 0"
           variant="outline"
           size="sm"
@@ -171,7 +184,7 @@ const openEdit = (category: TransactionCategory) => {
     </div>
 
     <!-- Summary Metrics Cards -->
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div v-show="showCards" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>

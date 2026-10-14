@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import SearchForm from '@/components/SearchForm.vue'
-import VersionSwitcher from '@/components/VersionSwitcher.vue'
+import AppBrand from '@/components/AppBrand.vue'
+import NavUser from '@/components/NavUser.vue'
 import { RouterLink } from 'vue-router';
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -19,9 +21,7 @@ import {
 
 const props = defineProps<SidebarProps>()
 
-// This is sample data.
 const data = {
-  versions: ['1.0.1', '1.1.0-alpha', '2.0.0-beta1'],
   navMain: [
     {
       title: 'Finanzas',
@@ -60,7 +60,7 @@ const data = {
 <template>
   <Sidebar v-bind="props">
     <SidebarHeader>
-      <VersionSwitcher />
+      <AppBrand />
       <SearchForm />
     </SidebarHeader>
     <SidebarContent>
@@ -77,6 +77,9 @@ const data = {
         </SidebarGroupContent>
       </SidebarGroup>
     </SidebarContent>
+    <SidebarFooter>
+      <NavUser />
+    </SidebarFooter>
     <SidebarRail />
   </Sidebar>
 </template>

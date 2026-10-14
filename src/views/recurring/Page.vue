@@ -9,8 +9,11 @@ import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatFullDate } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
-import { Repeat, TrendingUp, TrendingDown, CalendarClock, Plus, RefreshCw, Loader2 } from 'lucide-vue-next'
+import { Repeat, TrendingUp, TrendingDown, CalendarClock, Plus, RefreshCw, Loader2, Eye, EyeOff } from 'lucide-vue-next'
+import { useCardsVisibility } from '@/composables/useCardsVisibility'
 import { toast } from 'vue-sonner'
+
+const showCards = useCardsVisibility('recurring')
 
 const items = ref<RecurringTransaction[]>([])
 const loading = ref(true)
@@ -123,6 +126,16 @@ const handleToggle = async (item: RecurringTransaction) => {
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          class="gap-1.5"
+          :title="showCards ? 'Ocultar resumen' : 'Mostrar resumen'"
+          @click="showCards = !showCards"
+        >
+          <EyeOff v-if="showCards" class="h-4 w-4" />
+          <Eye v-else class="h-4 w-4" />
+          <span class="hidden sm:inline">{{ showCards ? 'Ocultar resumen' : 'Mostrar resumen' }}</span>
+        </Button>
         <Button variant="outline" size="sm" :disabled="syncing" @click="handleSync" class="gap-1.5">
           <Loader2 v-if="syncing" class="h-4 w-4 animate-spin" />
           <RefreshCw v-else class="h-4 w-4" />
@@ -136,7 +149,7 @@ const handleToggle = async (item: RecurringTransaction) => {
     </div>
 
     <!-- Summary Metrics Cards -->
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div v-show="showCards" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>

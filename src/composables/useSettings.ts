@@ -11,6 +11,7 @@ interface SettingsCache {
   exchangeRateSource: ExchangeRateSource
   manualRate: number | null
   showBsEquivalent: boolean
+  defaultInBs: boolean
   bcvRate: number | null
   bcvRateUpdatedAt: string | null
   bcvRateFetchedAt: string | null
@@ -21,6 +22,7 @@ const DEFAULTS: SettingsCache = {
   exchangeRateSource: 'bcv',
   manualRate: null,
   showBsEquivalent: true,
+  defaultInBs: false,
   bcvRate: null,
   bcvRateUpdatedAt: null,
   bcvRateFetchedAt: null,
@@ -45,6 +47,10 @@ const manualRate = computed({
 const showBsEquivalent = computed({
   get: () => cache.value.showBsEquivalent,
   set: (value: boolean) => { cache.value.showBsEquivalent = value },
+})
+const defaultInBs = computed({
+  get: () => cache.value.defaultInBs,
+  set: (value: boolean) => { cache.value.defaultInBs = value },
 })
 const bcvRate = computed(() => cache.value.bcvRate)
 const bcvRateUpdatedAt = computed(() => cache.value.bcvRateUpdatedAt)
@@ -99,6 +105,9 @@ function applyUserMetadata(metadata: Record<string, any> | null | undefined) {
   if (typeof metadata.show_bs_equivalent === 'boolean') {
     cache.value.showBsEquivalent = metadata.show_bs_equivalent
   }
+  if (typeof metadata.default_in_bs === 'boolean') {
+    cache.value.defaultInBs = metadata.default_in_bs
+  }
 }
 
 function resetToDefaults() {
@@ -106,6 +115,7 @@ function resetToDefaults() {
   cache.value.exchangeRateSource = DEFAULTS.exchangeRateSource
   cache.value.manualRate = DEFAULTS.manualRate
   cache.value.showBsEquivalent = DEFAULTS.showBsEquivalent
+  cache.value.defaultInBs = DEFAULTS.defaultInBs
 }
 
 async function initSettings() {
@@ -138,11 +148,13 @@ async function saveSettings(partial: Partial<{
   exchangeRateSource: ExchangeRateSource
   manualRate: number | null
   showBsEquivalent: boolean
+  defaultInBs: boolean
 }>) {
   if (partial.currency !== undefined) cache.value.currency = partial.currency
   if (partial.exchangeRateSource !== undefined) cache.value.exchangeRateSource = partial.exchangeRateSource
   if (partial.manualRate !== undefined) cache.value.manualRate = partial.manualRate
   if (partial.showBsEquivalent !== undefined) cache.value.showBsEquivalent = partial.showBsEquivalent
+  if (partial.defaultInBs !== undefined) cache.value.defaultInBs = partial.defaultInBs
 
   savingSettings.value = true
   try {
@@ -151,6 +163,7 @@ async function saveSettings(partial: Partial<{
       exchange_rate_source: cache.value.exchangeRateSource,
       manual_exchange_rate: cache.value.manualRate ?? undefined,
       show_bs_equivalent: cache.value.showBsEquivalent,
+      default_in_bs: cache.value.defaultInBs,
     })
     return { synced: true }
   } catch (error) {
@@ -167,6 +180,7 @@ export function useSettings() {
     exchangeRateSource,
     manualRate,
     showBsEquivalent,
+    defaultInBs,
     bcvRate,
     bcvRateUpdatedAt,
     bcvRateLoading,

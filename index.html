@@ -8,6 +8,16 @@
     <meta name="theme-color" content="#0a0a0a" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Expenses Management</title>
+    <script>
+      // Aplica el tema antes de montar Vue para evitar el parpadeo (misma clave que useTheme.ts)
+      (function () {
+        try {
+          var stored = localStorage.getItem('expenses:theme') || 'auto'
+          var dark = stored === 'dark' || (stored === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) document.documentElement.classList.add('dark')
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="app"></div>

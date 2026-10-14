@@ -19,8 +19,11 @@ import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
 import SelectValue from '@/components/ui/select/SelectValue.vue'
 import { formatCurrency } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
-import { Wallet, TrendingDown, PiggyBank, Sparkles, Loader2 } from 'lucide-vue-next'
+import { Wallet, TrendingDown, PiggyBank, Sparkles, Loader2, Eye, EyeOff } from 'lucide-vue-next'
+import { useCardsVisibility } from '@/composables/useCardsVisibility'
 import { toast } from 'vue-sonner'
+
+const showCards = useCardsVisibility('accounts')
 
 const accounts = ref<Account[]>([])
 const allTransactions = ref<Transaction[]>([])
@@ -175,6 +178,16 @@ const openEdit = (account: Account) => {
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          class="gap-1.5"
+          :title="showCards ? 'Ocultar resumen' : 'Mostrar resumen'"
+          @click="showCards = !showCards"
+        >
+          <EyeOff v-if="showCards" class="h-4 w-4" />
+          <Eye v-else class="h-4 w-4" />
+          <span class="hidden sm:inline">{{ showCards ? 'Ocultar resumen' : 'Mostrar resumen' }}</span>
+        </Button>
         <Select v-model="periodView">
           <SelectTrigger class="w-[150px]">
             <SelectValue placeholder="Periodo" />
@@ -208,7 +221,7 @@ const openEdit = (account: Account) => {
     </div>
 
     <!-- Summary Metrics Cards -->
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+    <div v-show="showCards" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
       <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>

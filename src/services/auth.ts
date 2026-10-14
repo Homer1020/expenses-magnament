@@ -21,6 +21,7 @@ export async function updateProfile(metadata: {
   exchange_rate_source?: 'bcv' | 'manual'
   manual_exchange_rate?: number
   show_bs_equivalent?: boolean
+  default_in_bs?: boolean
 }) {
   const { data, error } = await supabase.auth.updateUser({
     data: metadata,

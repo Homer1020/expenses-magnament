@@ -9,6 +9,8 @@ const props = defineProps<{
   inline?: boolean
   /** Monto exacto en Bs guardado en la transacción; reemplaza la estimación. */
   exactBs?: number | null
+  /** Tasa Bs/USD guardada en la transacción; reemplaza la tasa actual en la estimación. */
+  rate?: number | null
 }>()
 
 const { bsEquivalenceEnabled, convertToBs } = useSettings()
@@ -18,6 +20,7 @@ const isExact = computed(() => !!props.exactBs && props.exactBs > 0)
 const bsAmount = computed(() => {
   if (isExact.value) return props.exactBs as number
   if (!bsEquivalenceEnabled.value) return null
+  if (props.rate && props.rate > 0) return props.value * props.rate
   return convertToBs(props.value)
 })
 

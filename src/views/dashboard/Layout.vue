@@ -21,12 +21,16 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { computed } from 'vue'
+import { Button } from '@/components/ui/button'
+import { useTheme } from '@/composables/useTheme'
+import { Sun, Moon } from 'lucide-vue-next'
 
 import { RouterView } from 'vue-router'
 
 import { useRoute } from 'vue-router'
 
 const route = useRoute();
+const { isDark, toggleTheme } = useTheme()
 const breadcrumb = computed<Array<{title: string, href?: string}>>(() => {
   return route.meta.breadcrumb || []
 })
@@ -54,6 +58,17 @@ const breadcrumb = computed<Array<{title: string, href?: string}>>(() => {
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
+        <Button
+          variant="ghost"
+          size="icon"
+          class="ml-auto size-8"
+          :title="isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+          @click="toggleTheme"
+        >
+          <Sun v-if="isDark" class="size-4" />
+          <Moon v-else class="size-4" />
+          <span class="sr-only">Cambiar tema</span>
+        </Button>
       </header>
       <div class="flex flex-1 flex-col gap-4 p-4">
         <RouterView />

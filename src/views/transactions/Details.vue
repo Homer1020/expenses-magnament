@@ -12,7 +12,7 @@ import {
 import BsHint from '@/components/BsHint.vue'
 import { formatCurrency, formatDateTime } from '@/lib/formatters'
 import type { Transaction } from '@/types'
-import { ArrowDownRight, ArrowUpRight, CalendarDays, FileText, Pencil, PiggyBank, Tag } from 'lucide-vue-next'
+import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, CalendarDays, FileText, Pencil, PiggyBank, Tag } from 'lucide-vue-next'
 
 const props = defineProps<{
   open: boolean
@@ -26,6 +26,8 @@ const emit = defineEmits<{
 
 const isIncome = computed(() => props.transaction?.categories?.type === 1)
 const amount = computed(() => Number(props.transaction?.amount) || 0)
+const bsAmount = computed(() => Number(props.transaction?.bs_amount) || null)
+const rate = computed(() => Number(props.transaction?.exchange_rate) || null)
 </script>
 
 <template>
@@ -48,9 +50,10 @@ const amount = computed(() => Number(props.transaction?.amount) || 0)
             class="text-3xl font-bold tracking-tight"
             :class="isIncome ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
           >
-            {{ isIncome ? '+' : '-' }}{{ formatCurrency(amount) }}
+            {{ isIncome ? '+' : '-' }}{{ bsAmount ? formatCurrency(bsAmount, 'VES') : formatCurrency(amount) }}
           </span>
-          <BsHint :value="amount" :exact-bs="transaction.bs_amount" class="!mt-0" />
+          <span v-if="bsAmount" class="text-xs text-muted-foreground">{{ formatCurrency(amount) }}</span>
+          <BsHint v-else :value="amount" :rate="transaction.exchange_rate" class="!mt-0" />
           <span class="text-xs font-medium text-muted-foreground">{{ isIncome ? 'Ingreso' : 'Egreso' }}</span>
         </div>
 
@@ -74,6 +77,10 @@ const amount = computed(() => Number(props.transaction?.amount) || 0)
           <div class="flex items-center justify-between gap-4 py-2.5">
             <dt class="flex items-center gap-2 text-muted-foreground"><CalendarDays class="h-4 w-4" />Fecha</dt>
             <dd class="font-medium">{{ formatDateTime(transaction.date) }}</dd>
+          </div>
+          <div v-if="rate" class="flex items-center justify-between gap-4 py-2.5">
+            <dt class="flex items-center gap-2 text-muted-foreground"><ArrowLeftRight class="h-4 w-4" />Tasa</dt>
+            <dd class="font-medium">{{ rate.toFixed(2) }} Bs/USD</dd>
           </div>
           <div class="space-y-1.5 py-2.5">
             <dt class="flex items-center gap-2 text-muted-foreground"><FileText class="h-4 w-4" />Descripción</dt>

@@ -10,6 +10,8 @@ export interface Transaction {
   id: number
   amount: number
   bs_amount?: number | null
+  /** Tasa Bs/USD vigente al registrar la transacción. */
+  exchange_rate?: number | null
   description: string
   created_at: string
   user_id: string

@@ -4,8 +4,10 @@ import { RouterView } from 'vue-router';
 import { Toaster } from './components/ui/sonner';
 import OfflineBanner from './components/OfflineBanner.vue';
 import { useSettings } from './composables/useSettings';
+import { useTheme } from './composables/useTheme';
 
 const { initSettings } = useSettings();
+useTheme();
 
 onMounted(() => {
   initSettings();

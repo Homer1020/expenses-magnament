@@ -45,6 +45,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
       const isIncome = !!row.original.categories.type
       return renderAmountCell(amount, {
         exactBs: row.original.bs_amount,
+        rate: row.original.exchange_rate,
         icon: isIncome ? ArrowUpRight : ArrowDownLeft,
         class: isIncome
           ? 'font-medium text-green-600 dark:text-green-500'

@@ -11,8 +11,11 @@ import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
-import { Target, TrendingDown, Wallet, AlertTriangle, Plus } from 'lucide-vue-next'
+import { Target, TrendingDown, Wallet, AlertTriangle, Plus, Eye, EyeOff } from 'lucide-vue-next'
+import { useCardsVisibility } from '@/composables/useCardsVisibility'
 import { toast } from 'vue-sonner'
+
+const showCards = useCardsVisibility('budgets')
 
 const goals = ref<BudgetGoal[]>([])
 const currentMonthTransactions = ref<Transaction[]>([])
@@ -94,6 +97,16 @@ const openEdit = (goal: BudgetGoal) => {
         </p>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          class="gap-1.5"
+          :title="showCards ? 'Ocultar resumen' : 'Mostrar resumen'"
+          @click="showCards = !showCards"
+        >
+          <EyeOff v-if="showCards" class="h-4 w-4" />
+          <Eye v-else class="h-4 w-4" />
+          <span class="hidden sm:inline">{{ showCards ? 'Ocultar resumen' : 'Mostrar resumen' }}</span>
+        </Button>
         <Button @click="openCreate" class="gap-1.5 shadow-sm">
           <Plus class="h-4 w-4" />
           Nueva Meta
@@ -102,7 +115,7 @@ const openEdit = (goal: BudgetGoal) => {
     </div>
 
     <!-- Summary Metrics Cards -->
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+    <div v-show="showCards" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
       <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>

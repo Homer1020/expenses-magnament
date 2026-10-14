@@ -36,6 +36,7 @@ const {
   exchangeRateSource,
   manualRate,
   showBsEquivalent,
+  defaultInBs,
   bcvRate,
   bcvRateUpdatedAt,
   bcvRateLoading,
@@ -54,6 +55,7 @@ const selectedCurrency = ref(currency.value)
 const sourceDraft = ref(exchangeRateSource.value)
 const manualRateDraft = ref<string>(manualRate.value != null ? String(manualRate.value) : '')
 const showBsDraft = ref(showBsEquivalent.value)
+const defaultInBsDraft = ref(defaultInBs.value)
 
 const calcAmount = ref(1)
 
@@ -119,6 +121,7 @@ async function handleSaveConverter() {
       exchangeRateSource: sourceDraft.value,
       manualRate: sourceDraft.value === 'manual' ? Number(manualRateDraft.value) : manualRate.value,
       showBsEquivalent: showBsDraft.value,
+      defaultInBs: defaultInBsDraft.value,
     })
     if (result.synced) {
       toast.success('Configuración del conversor actualizada')
@@ -145,6 +148,7 @@ onMounted(async () => {
   sourceDraft.value = exchangeRateSource.value
   manualRateDraft.value = manualRate.value != null ? String(manualRate.value) : ''
   showBsDraft.value = showBsEquivalent.value
+  defaultInBsDraft.value = defaultInBs.value
   pageLoading.value = false
 })
 </script>
@@ -316,6 +320,15 @@ onMounted(async () => {
                 <p class="text-xs text-muted-foreground">Se verá junto a los montos en toda la app.</p>
               </div>
               <Switch v-model="showBsDraft" />
+            </div>
+
+            <!-- Toggle registrar transacciones en Bs por defecto -->
+            <div class="flex items-center justify-between p-3 rounded-lg border">
+              <div>
+                <p class="text-sm font-medium">Registrar en Bs por defecto</p>
+                <p class="text-xs text-muted-foreground">Las nuevas transacciones abren con "Monto en Bs" activado.</p>
+              </div>
+              <Switch v-model="defaultInBsDraft" />
             </div>
 
             <!-- Calculadora en vivo -->

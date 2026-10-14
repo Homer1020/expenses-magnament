@@ -47,7 +47,7 @@ const { open, hide, transaction } = defineProps<{
 
 const isEditing = computed(() => !!transaction)
 
-const { currency, effectiveRate } = useSettings()
+const { currency, effectiveRate, defaultInBs } = useSettings()
 
 // "Monto en Bs": el usuario escribe Bs; `amount` (moneda global) se deriva con la tasa vigente.
 const inBs = ref(false)
@@ -194,9 +194,11 @@ watch(() => open, async (isOpen) => {
   isSyncingForm.value = true
   if (transaction) {
     inBs.value = !!transaction.bs_amount
-    // Precarga el equivalente solo si difiere del calculado con la tasa del sistema
+    // Precarga el equivalente solo si difiere del calculado con la tasa del sistema.
+    // Con tasa guardada no hace falta: ya refleja el equivalente real.
     realAmount.value =
-      transaction.bs_amount && effectiveRate.value && transaction.amount !== toUsd(transaction.bs_amount)
+      transaction.bs_amount && !transaction.exchange_rate && effectiveRate.value
+        && transaction.amount !== toUsd(transaction.bs_amount)
         ? transaction.amount
         : null
     hadCustomReal.value = realAmount.value !== null
@@ -208,7 +210,7 @@ watch(() => open, async (isOpen) => {
       description: transaction.description ?? '',
     })
   } else {
-    inBs.value = false
+    inBs.value = defaultInBs.value && canUseBs.value
     realAmount.value = null
     hadCustomReal.value = false
     resetForm({ values: { type: undefined, category: undefined, account: null, amount: undefined, description: '' } })
@@ -249,6 +251,9 @@ const onSubmit = handleSubmit(async (formValues) => {
       } else if (transaction?.bs_amount === bsAmount && !hadCustomReal.value) {
         // Si no cambió el Bs de una transacción existente, conserva su monto original
         amount = transaction.amount
+      } else if (transaction?.exchange_rate) {
+        // Al editar, convierte con la tasa guardada, no con la de hoy
+        amount = Math.round((bsAmount / transaction.exchange_rate) * 100) / 100
       } else if (effectiveRate.value) {
         amount = toUsd(bsAmount)
       } else {
@@ -261,10 +266,17 @@ const onSubmit = handleSubmit(async (formValues) => {
       }
     }
 
+    // Tasa Bs/USD del momento: en Bs es la implícita (amount × tasa = bs_amount);
+    // en USD al editar se conserva la histórica.
+    const exchangeRate = bsAmount !== null
+      ? bsAmount / amount
+      : transaction?.exchange_rate ?? effectiveRate.value
+
     if (isEditing.value && transaction) {
       await transactionsService.update(transaction.id, {
         amount,
         bs_amount: bsAmount,
+        exchange_rate: exchangeRate,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
@@ -282,6 +294,7 @@ const onSubmit = handleSubmit(async (formValues) => {
       await transactionsService.create({
         amount,
         bs_amount: bsAmount,
+        exchange_rate: exchangeRate,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
@@ -476,6 +489,15 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
         </div>
 
+        <!-- Monto en Bs -->
+        <div v-if="canUseBs || inBs" class="flex items-center justify-between rounded-lg border p-2.5">
+          <div class="space-y-0.5">
+            <Label for="amount-in-bs" class="text-sm">Monto en Bs</Label>
+            <p class="text-[11px] text-muted-foreground">Úsalo si pagaste o recibiste directamente en bolívares</p>
+          </div>
+          <Switch id="amount-in-bs" :model-value="inBs" :disabled="!canUseBs && !inBs" @update:model-value="onToggleBs(!!$event)" />
+        </div>
+
         <!-- Monto -->
         <FormField v-slot="{ componentField }" name="amount" :validate-on-blur="!isFieldDirty">
           <FormItem>
@@ -494,15 +516,6 @@ const onSubmit = handleSubmit(async (formValues) => {
             <FormMessage />
           </FormItem>
         </FormField>
-
-        <!-- Monto en Bs -->
-        <div v-if="canUseBs || inBs" class="flex items-center justify-between rounded-lg border p-2.5">
-          <div class="space-y-0.5">
-            <Label for="amount-in-bs" class="text-sm">Monto en Bs</Label>
-            <p class="text-[11px] text-muted-foreground">Úsalo si pagaste o recibiste directamente en bolívares</p>
-          </div>
-          <Switch id="amount-in-bs" :model-value="inBs" :disabled="!canUseBs && !inBs" @update:model-value="onToggleBs(!!$event)" />
-        </div>
 
         <!-- Equivalente real (opcional, solo si el monto es en Bs) -->
         <div v-if="inBs" class="space-y-1.5">
