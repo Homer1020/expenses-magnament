@@ -119,7 +119,7 @@ onMounted(async () => {
 
           <DropdownMenuSeparator />
 
-          <DropdownMenuItem @click="signOut" class="cursor-pointer text-destructive focus:text-destructive flex items-center gap-2">
+          <DropdownMenuItem @click="signOut" class="cursor-pointer flex items-center gap-2">
             <LogOut class="size-4" />
             <span>Cerrar Sesión</span>
           </DropdownMenuItem>
