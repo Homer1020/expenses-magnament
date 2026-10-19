@@ -10,6 +10,8 @@ interface RenderAmountCellOptions {
   exactBs?: number | null
   /** Tasa Bs/USD guardada en la transacción; reemplaza la tasa actual en la estimación. */
   rate?: number | null
+  /** Transacción solo en dólares: no muestra equivalente en Bs. */
+  usdOnly?: boolean
   /** Icono (componente) que se muestra antes del monto. */
   icon?: Component
 }
@@ -37,7 +39,7 @@ export function renderAmountCell(amount: number, options: RenderAmountCellOption
     ])
   }
 
-  const bs = !bsEquivalenceEnabled.value
+  const bs = options.usdOnly || !bsEquivalenceEnabled.value
     ? null
     : options.rate && options.rate > 0
       ? amount * options.rate

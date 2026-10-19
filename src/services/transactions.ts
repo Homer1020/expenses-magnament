@@ -21,8 +21,8 @@ export interface TransactionFilters {
 
 export interface TransactionInput {
   amount: number
-  bs_amount: number
-  exchange_rate: number
+  bs_amount: number | null
+  exchange_rate: number | null
   input_currency: TransactionCurrency
   description?: string
   category_id: number

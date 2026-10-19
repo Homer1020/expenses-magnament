@@ -54,7 +54,7 @@ const rate = computed(() => Number(props.transaction?.exchange_rate) || null)
             {{ isIncome ? '+' : '-' }}{{ bsAmount ? formatCurrency(bsAmount, 'VES') : formatCurrency(amount) }}
           </span>
           <span v-if="bsAmount" class="text-xs text-muted-foreground">{{ formatCurrency(amount) }}</span>
-          <BsHint v-else :value="amount" :rate="transaction.exchange_rate" class="!mt-0" />
+          <BsHint v-else-if="transaction.exchange_rate" :value="amount" :rate="transaction.exchange_rate" class="!mt-0" />
           <span class="text-xs font-medium text-muted-foreground">{{ isIncome ? 'Ingreso' : 'Egreso' }}</span>
         </div>
 

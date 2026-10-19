@@ -32,6 +32,7 @@ import { useSettings } from '@/composables/useSettings'
 import BsHint from '@/components/BsHint.vue'
 import { toTypedSchema } from '@vee-validate/zod'
 import { useForm } from 'vee-validate'
+import { useLocalStorage } from '@vueuse/core'
 import { computed, nextTick, ref, watch } from 'vue'
 import * as z from 'zod'
 import { Wallet, AlertCircle, TrendingDown } from 'lucide-vue-next'
@@ -59,6 +60,17 @@ const toUsd = (bs: number) => Math.round((bs / effectiveRate.value!) * 100) / 10
 // Equivalente real opcional (ej. lo que costó en Binance/PayPal); vacío = tasa del sistema
 const realAmount = ref<number | null>(null)
 const hadCustomReal = ref(false)
+// Monto en USD: guardar o no su equivalente en Bs, y con qué tasa.
+// Se recuerda la última elección (ej. apagado para comisiones PayPal).
+const rememberWithBs = useLocalStorage('expenses:tx-with-bs', true)
+const withBs = ref(true)
+const rateInput = ref<number | null>(null)
+const bsPreview = computed(() => {
+  const typed = Number(values.amount) || 0
+  const rate = Number(rateInput.value) || 0
+  return !inBs.value && withBs.value && typed > 0 && rate > 0 ? typed * rate : null
+})
+
 const implicitRate = computed(() => {
   const bs = Number(values.amount) || 0
   return inBs.value && realAmount.value && realAmount.value > 0 && bs > 0
@@ -197,17 +209,21 @@ watch(() => open, async (isOpen) => {
     // La tasa guardada ya refleja el equivalente real, no hace falta precargarlo.
     realAmount.value = null
     hadCustomReal.value = false
+    withBs.value = transaction.exchange_rate !== null
+    rateInput.value = transaction.exchange_rate ?? effectiveRate.value
     setValues({
       type: transaction.categories?.type,
       category: transaction.category_id,
       account: transaction.account_id ?? null,
-      amount: inBs.value ? transaction.bs_amount : transaction.amount,
+      amount: inBs.value ? transaction.bs_amount ?? transaction.amount : transaction.amount,
       description: transaction.description ?? '',
     })
   } else {
     inBs.value = defaultInBs.value && canUseBs.value
     realAmount.value = null
     hadCustomReal.value = false
+    withBs.value = rememberWithBs.value
+    rateInput.value = effectiveRate.value
     resetForm({ values: { type: undefined, category: undefined, account: null, amount: undefined, description: '' } })
   }
   await nextTick()
@@ -246,7 +262,7 @@ const onSubmit = handleSubmit(async (formValues) => {
       } else if (transaction?.input_currency === 'VES' && transaction.bs_amount === bsAmount && !hadCustomReal.value) {
         // Si no cambió el Bs de una transacción existente, conserva su monto original
         amount = transaction.amount
-      } else if (transaction) {
+      } else if (transaction?.exchange_rate) {
         // Al editar, convierte con la tasa guardada, no con la de hoy
         amount = Math.round((bsAmount / transaction.exchange_rate) * 100) / 100
       } else if (effectiveRate.value) {
@@ -261,21 +277,21 @@ const onSubmit = handleSubmit(async (formValues) => {
       }
     }
 
-    // Tasa Bs/USD del momento: en Bs es la implícita (amount × tasa = bs_amount);
-    // en USD al editar se conserva la histórica.
-    const exchangeRate = bsAmount !== null
-      ? bsAmount / amount
-      : transaction?.exchange_rate ?? effectiveRate.value
-    if (!exchangeRate) {
-      toast.error('No hay tasa de cambio disponible', {
-        description: 'Configura la tasa BCV o una tasa manual en Ajustes'
-      })
-      return
-    }
-
+    // En Bs la tasa es la implícita (amount × tasa = bs_amount). En USD es
+    // opcional: la que escribió el usuario, o ninguna si es solo en dólares.
     const inputCurrency = bsAmount !== null ? 'VES' : 'USD'
-    // En USD el equivalente en Bs se calcula con la tasa del momento
-    bsAmount ??= Math.round(amount * exchangeRate * 100) / 100
+    let exchangeRate: number | null = null
+    if (bsAmount !== null) {
+      exchangeRate = bsAmount / amount
+    } else if (withBs.value) {
+      exchangeRate = Number(rateInput.value) || null
+      if (!exchangeRate || exchangeRate <= 0) {
+        toast.error('Escribe una tasa Bs/USD válida o desactiva el equivalente en Bs')
+        return
+      }
+      bsAmount = Math.round(amount * exchangeRate * 100) / 100
+    }
+    if (!isEditing.value && inputCurrency === 'USD') rememberWithBs.value = withBs.value
 
     if (isEditing.value && transaction) {
       await transactionsService.update(transaction.id, {
@@ -519,10 +535,33 @@ const onSubmit = handleSubmit(async (formValues) => {
               ≈ {{ formatCurrency(usdAmount) }}
               <template v-if="implicitRate">· tasa real {{ implicitRate.toFixed(2) }} Bs</template>
             </span>
-            <BsHint v-else-if="!inBs && Number(values.amount) > 0" :value="Number(values.amount)" />
             <FormMessage />
           </FormItem>
         </FormField>
+
+        <!-- Equivalente en Bs (opcional, solo si el monto es en USD) -->
+        <div v-if="!inBs && currency !== 'VES'" class="space-y-2 rounded-lg border p-2.5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="space-y-0.5">
+              <Label for="with-bs" class="text-sm">Guardar equivalente en Bs</Label>
+              <p class="text-[11px] text-muted-foreground">Apágalo si fue 100% en dólares (PayPal, Zelle...)</p>
+            </div>
+            <Switch id="with-bs" :model-value="withBs" @update:model-value="withBs = !!$event" />
+          </div>
+          <div v-if="withBs" class="flex items-center gap-2">
+            <Label for="rate" class="shrink-0 text-xs text-muted-foreground">Tasa Bs/USD</Label>
+            <Input
+              id="rate"
+              type="number"
+              step="0.01"
+              class="h-8"
+              :placeholder="effectiveRate ? effectiveRate.toFixed(2) : 'Ej. 36.50'"
+              :model-value="rateInput ?? ''"
+              @update:model-value="rateInput = $event === '' ? null : Number($event)"
+            />
+          </div>
+          <p v-if="bsPreview" class="text-[11px] text-muted-foreground">≈ {{ formatCurrency(bsPreview, 'VES') }}</p>
+        </div>
 
         <!-- Equivalente real (opcional, solo si el monto es en Bs) -->
         <div v-if="inBs" class="space-y-1.5">

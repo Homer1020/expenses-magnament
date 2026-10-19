@@ -67,12 +67,6 @@ const nextUpcoming = computed(() => {
 })
 
 const handleSync = async () => {
-  if (!effectiveRate.value) {
-    toast.error('No hay tasa de cambio disponible', {
-      description: 'Configura la tasa BCV o una tasa manual en Ajustes para generar las transacciones'
-    })
-    return
-  }
   try {
     syncing.value = true
     const generated = await recurringTransactionsService.generateDueTransactions(effectiveRate.value)

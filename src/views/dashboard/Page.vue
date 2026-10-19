@@ -1198,7 +1198,7 @@ const monthlySeries = computed(() => {
                   <div class="text-sm font-bold text-rose-600 dark:text-rose-400">
                     -{{ formatCurrency(expense.amount) }}
                   </div>
-                  <BsHint :value="expense.amount" :exact-bs="expense.input_currency === 'VES' ? expense.bs_amount : null" :rate="expense.exchange_rate" />
+                  <BsHint v-if="expense.exchange_rate" :value="expense.amount" :exact-bs="expense.input_currency === 'VES' ? expense.bs_amount : null" :rate="expense.exchange_rate" />
                   <span class="text-[11px] text-muted-foreground">
                     {{ totalExpenses > 0 ? formatPercentage((expense.amount / totalExpenses) * 100) : '0%' }} del total
                   </span>
@@ -1261,7 +1261,7 @@ const monthlySeries = computed(() => {
                   >
                     {{ tx.categories?.type === 1 ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
                   </div>
-                  <BsHint :value="tx.amount" :exact-bs="tx.input_currency === 'VES' ? tx.bs_amount : null" :rate="tx.exchange_rate" />
+                  <BsHint v-if="tx.exchange_rate" :value="tx.amount" :exact-bs="tx.input_currency === 'VES' ? tx.bs_amount : null" :rate="tx.exchange_rate" />
                 </div>
               </div>
             </div>

@@ -46,6 +46,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
       return renderAmountCell(amount, {
         exactBs: row.original.input_currency === 'VES' ? row.original.bs_amount : null,
         rate: row.original.exchange_rate,
+        usdOnly: !row.original.exchange_rate,
         icon: isIncome ? ArrowUpRight : ArrowDownLeft,
         class: isIncome
           ? 'font-medium text-green-600 dark:text-green-500'

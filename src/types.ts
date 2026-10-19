@@ -11,10 +11,10 @@ export type TransactionCurrency = 'USD' | 'VES'
 export interface Transaction {
   id: number
   amount: number
-  /** Equivalente en Bs: exacto si se digitó en Bs, si no amount × exchange_rate. */
-  bs_amount: number
-  /** Tasa Bs/USD vigente al registrar la transacción. */
-  exchange_rate: number
+  /** Equivalente en Bs: exacto si se digitó en Bs, si no amount × exchange_rate. Null = solo dólares. */
+  bs_amount: number | null
+  /** Tasa Bs/USD aplicada al registrar la transacción. Null = solo dólares. */
+  exchange_rate: number | null
   /** Moneda en que se digitó la transacción. */
   input_currency: TransactionCurrency
   description: string

@@ -1,3 +1,4 @@
+-- ⚠️ Después de este corre transactions_optional_rate.sql (tasa y Bs vuelven a ser opcionales).
 -- ==============================================================================
 -- AMOUNT, EXCHANGE_RATE Y BS_AMOUNT OBLIGATORIOS
 -- Reemplaza a transactions_exchange_rate.sql y transactions_bs_amount.sql.
