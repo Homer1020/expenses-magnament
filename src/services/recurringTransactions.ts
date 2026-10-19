@@ -130,7 +130,10 @@ const MAX_OCCURRENCES_PER_RUN = 60;
 
 // Crea las transacciones vencidas de las recurrencias activas y avanza su
 // próxima fecha de ejecución. Se ejecuta en el cliente al abrir la app.
-export const generateDueTransactions = async (): Promise<number> => {
+// Sin tasa de cambio no genera nada: quedan pendientes hasta que haya una.
+export const generateDueTransactions = async (rate: number | null): Promise<number> => {
+  if (!rate || rate <= 0) return 0;
+
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return 0;
 
@@ -157,6 +160,9 @@ export const generateDueTransactions = async (): Promise<number> => {
     while (cursor <= todayISO && occurrences < MAX_OCCURRENCES_PER_RUN) {
       await transactionsService.create({
         amount: item.amount,
+        bs_amount: Math.round(item.amount * rate * 100) / 100,
+        exchange_rate: rate,
+        input_currency: 'USD',
         description: item.description,
         category_id: item.category_id,
         account_id: item.account_id,

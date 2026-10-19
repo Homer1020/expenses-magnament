@@ -9,10 +9,12 @@ import Create from './Create.vue'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatCurrency, formatFullDate } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
+import { useSettings } from '@/composables/useSettings'
 import { Repeat, TrendingUp, TrendingDown, CalendarClock, Plus, RefreshCw, Loader2, Eye, EyeOff } from 'lucide-vue-next'
 import { useCardsVisibility } from '@/composables/useCardsVisibility'
 import { toast } from 'vue-sonner'
 
+const { effectiveRate } = useSettings()
 const showCards = useCardsVisibility('recurring')
 
 const items = ref<RecurringTransaction[]>([])
@@ -65,9 +67,15 @@ const nextUpcoming = computed(() => {
 })
 
 const handleSync = async () => {
+  if (!effectiveRate.value) {
+    toast.error('No hay tasa de cambio disponible', {
+      description: 'Configura la tasa BCV o una tasa manual en Ajustes para generar las transacciones'
+    })
+    return
+  }
   try {
     syncing.value = true
-    const generated = await recurringTransactionsService.generateDueTransactions()
+    const generated = await recurringTransactionsService.generateDueTransactions(effectiveRate.value)
     await fetchData()
     if (generated > 0) {
       toast.success(`Se generaron ${generated} transacción(es) automáticamente`)

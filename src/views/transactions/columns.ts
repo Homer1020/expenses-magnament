@@ -44,7 +44,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
       const amount = Number.parseFloat(row.getValue('amount'))
       const isIncome = !!row.original.categories.type
       return renderAmountCell(amount, {
-        exactBs: row.original.bs_amount,
+        exactBs: row.original.input_currency === 'VES' ? row.original.bs_amount : null,
         rate: row.original.exchange_rate,
         icon: isIncome ? ArrowUpRight : ArrowDownLeft,
         class: isIncome

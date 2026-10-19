@@ -6,12 +6,17 @@ export interface TransactionCategory {
   user_id?: string
 }
 
+export type TransactionCurrency = 'USD' | 'VES'
+
 export interface Transaction {
   id: number
   amount: number
-  bs_amount?: number | null
+  /** Equivalente en Bs: exacto si se digitó en Bs, si no amount × exchange_rate. */
+  bs_amount: number
   /** Tasa Bs/USD vigente al registrar la transacción. */
-  exchange_rate?: number | null
+  exchange_rate: number
+  /** Moneda en que se digitó la transacción. */
+  input_currency: TransactionCurrency
   description: string
   created_at: string
   user_id: string

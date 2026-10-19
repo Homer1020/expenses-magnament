@@ -193,20 +193,15 @@ watch(() => open, async (isOpen) => {
 
   isSyncingForm.value = true
   if (transaction) {
-    inBs.value = !!transaction.bs_amount
-    // Precarga el equivalente solo si difiere del calculado con la tasa del sistema.
-    // Con tasa guardada no hace falta: ya refleja el equivalente real.
-    realAmount.value =
-      transaction.bs_amount && !transaction.exchange_rate && effectiveRate.value
-        && transaction.amount !== toUsd(transaction.bs_amount)
-        ? transaction.amount
-        : null
-    hadCustomReal.value = realAmount.value !== null
+    inBs.value = transaction.input_currency === 'VES'
+    // La tasa guardada ya refleja el equivalente real, no hace falta precargarlo.
+    realAmount.value = null
+    hadCustomReal.value = false
     setValues({
       type: transaction.categories?.type,
       category: transaction.category_id,
       account: transaction.account_id ?? null,
-      amount: transaction.bs_amount ?? transaction.amount,
+      amount: inBs.value ? transaction.bs_amount : transaction.amount,
       description: transaction.description ?? '',
     })
   } else {
@@ -248,10 +243,10 @@ const onSubmit = handleSubmit(async (formValues) => {
       bsAmount = formValues.amount!
       if (realAmount.value && realAmount.value > 0) {
         amount = Math.round(realAmount.value * 100) / 100
-      } else if (transaction?.bs_amount === bsAmount && !hadCustomReal.value) {
+      } else if (transaction?.input_currency === 'VES' && transaction.bs_amount === bsAmount && !hadCustomReal.value) {
         // Si no cambió el Bs de una transacción existente, conserva su monto original
         amount = transaction.amount
-      } else if (transaction?.exchange_rate) {
+      } else if (transaction) {
         // Al editar, convierte con la tasa guardada, no con la de hoy
         amount = Math.round((bsAmount / transaction.exchange_rate) * 100) / 100
       } else if (effectiveRate.value) {
@@ -271,12 +266,23 @@ const onSubmit = handleSubmit(async (formValues) => {
     const exchangeRate = bsAmount !== null
       ? bsAmount / amount
       : transaction?.exchange_rate ?? effectiveRate.value
+    if (!exchangeRate) {
+      toast.error('No hay tasa de cambio disponible', {
+        description: 'Configura la tasa BCV o una tasa manual en Ajustes'
+      })
+      return
+    }
+
+    const inputCurrency = bsAmount !== null ? 'VES' : 'USD'
+    // En USD el equivalente en Bs se calcula con la tasa del momento
+    bsAmount ??= Math.round(amount * exchangeRate * 100) / 100
 
     if (isEditing.value && transaction) {
       await transactionsService.update(transaction.id, {
         amount,
         bs_amount: bsAmount,
         exchange_rate: exchangeRate,
+        input_currency: inputCurrency,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
@@ -295,6 +301,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         amount,
         bs_amount: bsAmount,
         exchange_rate: exchangeRate,
+        input_currency: inputCurrency,
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,

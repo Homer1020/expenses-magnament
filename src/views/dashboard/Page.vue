@@ -13,6 +13,7 @@ import * as recurringTransactionsService from '@/services/recurringTransactions'
 import type { Transaction, TransactionCategory, Account } from '@/types'
 import { formatCurrency, formatCurrencyWithBs, formatPercentage, formatShortDate } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
+import { useSettings } from '@/composables/useSettings'
 import TablePicker from '@/views/transactions/TablePicker.vue'
 
 import {
@@ -52,6 +53,8 @@ import {
 } from 'lucide-vue-next'
 
 // State
+const { effectiveRate } = useSettings()
+
 const loading = ref(true)
 const refreshing = ref(false)
 const transactions = ref<Transaction[]>([])
@@ -166,7 +169,7 @@ const fetchDashboardData = async (isRefresh = false) => {
 
 onMounted(async () => {
   try {
-    await recurringTransactionsService.generateDueTransactions()
+    await recurringTransactionsService.generateDueTransactions(effectiveRate.value)
   } catch (err) {
     console.error('Error generating due recurring transactions:', err)
   }
@@ -1195,7 +1198,7 @@ const monthlySeries = computed(() => {
                   <div class="text-sm font-bold text-rose-600 dark:text-rose-400">
                     -{{ formatCurrency(expense.amount) }}
                   </div>
-                  <BsHint :value="expense.amount" :exact-bs="expense.bs_amount" :rate="expense.exchange_rate" />
+                  <BsHint :value="expense.amount" :exact-bs="expense.input_currency === 'VES' ? expense.bs_amount : null" :rate="expense.exchange_rate" />
                   <span class="text-[11px] text-muted-foreground">
                     {{ totalExpenses > 0 ? formatPercentage((expense.amount / totalExpenses) * 100) : '0%' }} del total
                   </span>
@@ -1258,7 +1261,7 @@ const monthlySeries = computed(() => {
                   >
                     {{ tx.categories?.type === 1 ? '+' : '-' }}{{ formatCurrency(tx.amount) }}
                   </div>
-                  <BsHint :value="tx.amount" :exact-bs="tx.bs_amount" :rate="tx.exchange_rate" />
+                  <BsHint :value="tx.amount" :exact-bs="tx.input_currency === 'VES' ? tx.bs_amount : null" :rate="tx.exchange_rate" />
                 </div>
               </div>
             </div>

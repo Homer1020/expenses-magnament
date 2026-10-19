@@ -26,7 +26,8 @@ const emit = defineEmits<{
 
 const isIncome = computed(() => props.transaction?.categories?.type === 1)
 const amount = computed(() => Number(props.transaction?.amount) || 0)
-const bsAmount = computed(() => Number(props.transaction?.bs_amount) || null)
+// Monto principal en Bs solo si se digitó en Bs
+const bsAmount = computed(() => (props.transaction?.input_currency === 'VES' ? Number(props.transaction.bs_amount) || null : null))
 const rate = computed(() => Number(props.transaction?.exchange_rate) || null)
 </script>
 

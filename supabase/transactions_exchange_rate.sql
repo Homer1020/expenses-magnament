@@ -1,3 +1,4 @@
+-- ⚠️ Histórico: reemplazado por transactions_required_rate.sql (columnas obligatorias).
 -- Guarda la tasa Bs/USD vigente al registrar cada transacción, para poder
 -- estimar cuántos Bs se gastaron en el tiempo aunque la tasa cambie.
 -- En transacciones en Bs se cumple amount * exchange_rate = bs_amount.
