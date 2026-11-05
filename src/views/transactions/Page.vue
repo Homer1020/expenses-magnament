@@ -103,9 +103,13 @@ const viewingTransaction = ref<Transaction | null>(null)
 const detailsOpen = computed(() => viewingTransaction.value !== null)
 
 const updateFilters = async (dateRange: DateRange) => {
+  dateFilters.value.start = dateRange.start
+  dateFilters.value.end = dateRange.end
+
+  // Only fetch when both ends of the range are selected
+  if (!dateRange.start || !dateRange.end) return
+
   try {
-    dateFilters.value.start = dateRange.start
-    dateFilters.value.end = dateRange.end
     await fetchTransactions()
   } catch (err: any) {
     console.error('Error filtering transactions:', err)
