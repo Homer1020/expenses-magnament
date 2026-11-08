@@ -9,7 +9,6 @@ export interface AccountWithMetrics extends Account {
   spent: number
   available: number
   spentRatio: number
-  fundBalance: number
 }
 
 export type PeriodView = 'month' | 'accumulated'
@@ -64,19 +63,6 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
       const available = row.original.available || 0
       const isPositive = available >= 0
       return renderAmountCell(available, {
-        class: `font-bold ${
-          isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
-        }`,
-      })
-    },
-  },
-  {
-    accessorKey: 'fundBalance',
-    header: 'Saldo del Fondo',
-    cell: ({ row }) => {
-      const fundBalance = row.original.fundBalance || 0
-      const isPositive = fundBalance >= 0
-      return renderAmountCell(fundBalance, {
         class: `font-bold ${
           isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'
         }`,

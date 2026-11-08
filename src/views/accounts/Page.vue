@@ -26,8 +26,8 @@ import { toast } from 'vue-sonner'
 const showCards = useCardsVisibility('accounts')
 
 const accounts = ref<Account[]>([])
-const allTransactions = ref<Transaction[]>([])
 const currentMonthTransactions = ref<Transaction[]>([])
+const allPeriodTransactions = ref<Transaction[]>([])
 const loading = ref(true)
 const error = ref<PostgrestError | null>(null)
 
@@ -36,14 +36,15 @@ const fetchData = async () => {
   const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString()
   const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1)).toISOString()
 
-  const [accs, allTx] = await Promise.all([
+  const [accs, allTx, monthTx] = await Promise.all([
     accountsService.getAll(),
     transactionsService.getAll(),
+    transactionsService.getAll({ startISO: startOfMonth, endISO: endOfMonth }),
   ])
 
   accounts.value = accs
-  allTransactions.value = allTx
-  currentMonthTransactions.value = allTx.filter((t) => t.date >= startOfMonth && t.date < endOfMonth)
+  allPeriodTransactions.value = allTx
+  currentMonthTransactions.value = monthTx
 }
 
 onMounted(async () => {
@@ -65,7 +66,7 @@ onMounted(async () => {
 const periodView = ref<PeriodView>('month')
 
 const periodTransactions = computed(() => {
-  return periodView.value === 'month' ? currentMonthTransactions.value : allTransactions.value
+  return periodView.value === 'month' ? currentMonthTransactions.value : allPeriodTransactions.value
 })
 
 // Metrics calculations
@@ -75,19 +76,53 @@ const periodIncome = computed(() => {
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 })
 
+const periodExpenses = computed(() => {
+  return periodTransactions.value
+    .filter((t) => t.categories?.type !== 1)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+})
+
+const netBalance = computed(() => periodIncome.value - periodExpenses.value)
+
+// Egresos del periodo que NO tienen account_id asignado (gastos sin presupuesto)
+const unassignedExpenses = computed(() => {
+  return periodTransactions.value
+    .filter((t) => t.categories?.type !== 1 && !t.account_id)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+})
+
+// Ingresos del periodo que NO tienen account_id asignado
+const unassignedIncome = computed(() => {
+  return periodTransactions.value
+    .filter((t) => t.categories?.type === 1 && !t.account_id)
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+})
+
+// Base de ingreso neto para repartir en los presupuestos:
+// Ingresos totales menos los egresos que no tienen presupuesto asignado
+const netDistributableIncome = computed(() => {
+  return Math.max(0, periodIncome.value - unassignedExpenses.value)
+})
+
 const accountsWithMetrics = computed<AccountWithMetrics[]>(() => {
-  const income = periodIncome.value
+  const distributable = netDistributableIncome.value
   return accounts.value.map((acc) => {
-    const allocatedBudget = (income * (acc.percentage || 0)) / 100
+    // Presupuesto asignado según el % del ingreso neto
+    const allocatedBudget = (distributable * (acc.percentage || 0)) / 100
+
+    // Gastado en este presupuesto
     const spent = periodTransactions.value
       .filter((t) => t.account_id === acc.id && t.categories?.type !== 1)
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-    const available = allocatedBudget - spent
-    const spentRatio = allocatedBudget > 0 ? (spent / allocatedBudget) * 100 : 0
 
-    const fundBalance = allTransactions.value
-      .filter((t) => t.account_id === acc.id)
-      .reduce((sum, t) => sum + (t.categories?.type === 1 ? Number(t.amount) || 0 : -(Number(t.amount) || 0)), 0)
+    // Ingresos asignados directamente a este presupuesto
+    const directIncome = periodTransactions.value
+      .filter((t) => t.account_id === acc.id && t.categories?.type === 1)
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+
+    const totalBudgetForAcc = allocatedBudget + directIncome
+    const available = totalBudgetForAcc - spent
+    const spentRatio = totalBudgetForAcc > 0 ? (spent / totalBudgetForAcc) * 100 : 0
 
     return {
       ...acc,
@@ -95,25 +130,25 @@ const accountsWithMetrics = computed<AccountWithMetrics[]>(() => {
       spent,
       available,
       spentRatio,
-      fundBalance,
     }
   })
-})
-
-const totalFundBalance = computed(() => {
-  return accountsWithMetrics.value.reduce((sum, a) => sum + a.fundBalance, 0)
 })
 
 const totalAllocated = computed(() => {
   return accountsWithMetrics.value.reduce((sum, a) => sum + a.allocatedBudget, 0)
 })
 
-const totalSpent = computed(() => {
+const totalBudgetSpent = computed(() => {
   return accountsWithMetrics.value.reduce((sum, a) => sum + a.spent, 0)
 })
 
-const totalAvailable = computed(() => {
+const totalBudgetAvailable = computed(() => {
   return accountsWithMetrics.value.reduce((sum, a) => sum + a.available, 0)
+})
+
+// Saldo disponible total = dinero neto total restante en el periodo (Ingresos Totales - Egresos Totales)
+const totalAvailable = computed(() => {
+  return netBalance.value
 })
 
 const totalPercentage = computed(() => {
@@ -221,22 +256,7 @@ const openEdit = (account: Account) => {
     </div>
 
     <!-- Summary Metrics Cards -->
-    <div v-show="showCards" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-      <Card class="border shadow-xs p-0">
-        <CardContent class="p-4 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-muted-foreground">
-              {{ periodView === 'month' ? 'Ingresos del Mes' : 'Ingresos Acumulados' }}
-            </p>
-            <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(periodIncome) }}</h3>
-            <BsHint :value="periodIncome" />
-          </div>
-          <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-            <PiggyBank class="h-5 w-5" />
-          </div>
-        </CardContent>
-      </Card>
-
+    <div v-show="showCards" class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <Card class="border shadow-xs p-0">
         <CardContent class="p-4 flex items-center justify-between">
           <div>
@@ -249,7 +269,7 @@ const openEdit = (account: Account) => {
               class="text-[11px] font-medium"
               :class="totalPercentage === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'"
             >
-              {{ totalPercentage }}% asignado
+              {{ totalPercentage }}% asignado · Base neta {{ formatCurrency(netDistributableIncome) }}
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-primary/10 text-primary">
@@ -262,10 +282,14 @@ const openEdit = (account: Account) => {
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">
-              Gastado desde Presupuestos <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
+              Total Gastado <span class="opacity-60">({{ periodView === 'month' ? 'este mes' : 'acumulado' }})</span>
             </p>
-            <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ formatCurrency(totalSpent) }}</h3>
-            <BsHint :value="totalSpent" />
+            <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ formatCurrency(periodExpenses) }}</h3>
+            <BsHint :value="periodExpenses" />
+            <span class="text-[11px] text-muted-foreground font-medium">
+              {{ formatCurrency(totalBudgetSpent) }} en presupuestos
+              <template v-if="unassignedExpenses > 0"> · {{ formatCurrency(unassignedExpenses) }} sin asignar</template>
+            </span>
           </div>
           <div class="p-2.5 rounded-full bg-rose-500/10 text-rose-500">
             <TrendingDown class="h-5 w-5" />
@@ -286,24 +310,12 @@ const openEdit = (account: Account) => {
               {{ formatCurrency(totalAvailable) }}
             </h3>
             <BsHint :value="totalAvailable" />
-          </div>
-          <div class="p-2.5 rounded-full bg-primary/10 text-primary">
-            <Wallet class="h-5 w-5" />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card class="border shadow-xs p-0">
-        <CardContent class="p-4 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-medium text-muted-foreground">Total en Fondos</p>
-            <h3
-              class="text-lg font-bold mt-0.5"
-              :class="totalFundBalance >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
-            >
-              {{ formatCurrency(totalFundBalance) }}
-            </h3>
-            <BsHint :value="totalFundBalance" />
+            <span class="text-[11px] font-medium text-muted-foreground">
+              {{ formatCurrency(totalBudgetAvailable) }} en presupuestos
+              <template v-if="unassignedExpenses > 0 || unassignedIncome > 0">
+                · {{ unassignedIncome - unassignedExpenses >= 0 ? '+' : '' }}{{ formatCurrency(unassignedIncome - unassignedExpenses) }} libre
+              </template>
+            </span>
           </div>
           <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
             <PiggyBank class="h-5 w-5" />

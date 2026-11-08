@@ -120,12 +120,21 @@ const usdAmount = computed(() => {
   return effectiveRate.value ? toUsd(typed) : typed
 })
 
-// Calculate monthly income and account live calculations
+// Calculate monthly income, expenses, and net base for budget allocation
 const monthlyIncome = computed(() => {
   return currentMonthTransactions.value
     .filter((t) => t.categories?.type === 1)
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 })
+
+const unassignedMonthlyExpenses = computed(() => {
+  return currentMonthTransactions.value
+    .filter((t) => t.categories?.type !== 1 && !t.account_id && (transaction ? t.id !== transaction.id : true))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+})
+
+// Net monthly distributable income base (gross income minus unassigned expenses)
+const monthlyNetIncome = computed(() => Math.max(0, monthlyIncome.value - unassignedMonthlyExpenses.value))
 
 const selectedAccountData = computed(() => {
   if (!values.account) return null
@@ -133,36 +142,45 @@ const selectedAccountData = computed(() => {
   if (!acc) return null
 
   const currentAmount = usdAmount.value
+  const netBase = monthlyNetIncome.value
+  const allocatedBudget = (netBase * (acc.percentage || 0)) / 100
 
-  if (values.type === 1) {
-    // Ingreso: saldo acumulado histórico del fondo (ingresos - egresos asignados)
-    const currentBalance = allTransactions.value
-      .filter((t) => t.account_id === acc.id && (transaction ? t.id !== transaction.id : true))
-      .reduce((sum, t) => sum + (t.categories?.type === 1 ? Number(t.amount) || 0 : -(Number(t.amount) || 0)), 0)
-    const projectedBalance = currentBalance + currentAmount
+  // Direct income assigned specifically to this account (excluding the editing transaction)
+  const directIncome = currentMonthTransactions.value
+    .filter((t) => t.account_id === acc.id && t.categories?.type === 1 && (transaction ? t.id !== transaction.id : true))
+    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
-    return {
-      ...acc,
-      mode: 'income' as const,
-      currentBalance,
-      currentAmount,
-      projectedBalance,
-    }
-  }
-
-  const allocatedBudget = (monthlyIncome.value * (acc.percentage || 0)) / 100
   // Sum expenses for this account this month, excluding current editing transaction
   const spentSoFar = currentMonthTransactions.value
     .filter((t) => t.account_id === acc.id && t.categories?.type !== 1 && (transaction ? t.id !== transaction.id : true))
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
-  const availableBefore = allocatedBudget - spentSoFar
+  const availableBefore = allocatedBudget + directIncome - spentSoFar
+
+  if (values.type === 1) {
+    const projectedAvailable = availableBefore + currentAmount
+
+    return {
+      ...acc,
+      mode: 'income' as const,
+      netBase,
+      allocatedBudget,
+      directIncome,
+      spentSoFar,
+      availableBefore,
+      currentAmount,
+      projectedAvailable,
+    }
+  }
+
   const projectedRemaining = availableBefore - currentAmount
 
   return {
     ...acc,
     mode: 'expense' as const,
+    netBase,
     allocatedBudget,
+    directIncome,
     spentSoFar,
     availableBefore,
     currentAmount,
@@ -178,16 +196,17 @@ const fetchBudgetData = async () => {
     const startOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth(), 1)).toISOString()
     const endOfMonth = new Date(Date.UTC(now.getFullYear(), now.getMonth() + 1, 1)).toISOString()
 
-    const [cats, accs, allTx] = await Promise.all([
+    const [cats, accs, allTx, monthTx] = await Promise.all([
       categoriesService.getAll(),
       accountsService.getAll(),
       transactionsService.getAll(),
+      transactionsService.getAll({ startISO: startOfMonth, endISO: endOfMonth }),
     ])
 
     categories.value = cats
     accounts.value = accs
     allTransactions.value = allTx
-    currentMonthTransactions.value = allTx.filter((t) => t.date >= startOfMonth && t.date < endOfMonth)
+    currentMonthTransactions.value = monthTx
   } catch (err: any) {
     console.error('Error fetching modal budget data:', err)
     toast.error('Error al cargar datos auxiliares', {
@@ -432,7 +451,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div class="flex items-center justify-between">
             <span class="font-medium text-muted-foreground flex items-center gap-1.5">
               <Wallet class="h-3.5 w-3.5 text-primary" />
-              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de {{ formatCurrency(monthlyIncome) }}):
+              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de {{ formatCurrency(selectedAccountData.netBase) }}):
             </span>
             <span class="flex flex-col items-end">
               <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.allocatedBudget) }}</span>
@@ -493,21 +512,46 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div class="flex items-center justify-between">
             <span class="font-medium text-muted-foreground flex items-center gap-1.5">
               <Wallet class="h-3.5 w-3.5 text-primary" />
-              Saldo actual del fondo:
+              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de {{ formatCurrency(selectedAccountData.netBase) }}):
             </span>
             <span class="flex flex-col items-end">
-              <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.currentBalance) }}</span>
-              <BsHint :value="selectedAccountData.currentBalance" inline />
+              <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.allocatedBudget) }}</span>
+              <BsHint :value="selectedAccountData.allocatedBudget" inline />
             </span>
           </div>
 
+          <div class="flex items-center justify-between">
+            <span class="text-muted-foreground flex items-center gap-1.5">
+              <TrendingDown class="h-3.5 w-3.5 text-rose-500" />
+              Gastado este mes:
+            </span>
+            <span class="flex flex-col items-end">
+              <span class="font-medium text-rose-500">{{ formatCurrency(selectedAccountData.spentSoFar) }}</span>
+              <BsHint :value="selectedAccountData.spentSoFar" inline />
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between pt-1.5 border-t">
+            <span class="font-medium">Disponible actual en presupuesto:</span>
+            <span class="flex flex-col items-end">
+              <span
+                class="font-bold text-sm"
+                :class="selectedAccountData.availableBefore >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'"
+              >
+                {{ formatCurrency(selectedAccountData.availableBefore) }}
+              </span>
+              <BsHint :value="selectedAccountData.availableBefore" inline />
+            </span>
+          </div>
+
+          <!-- Proyección tras el ingreso -->
           <div v-if="selectedAccountData.currentAmount > 0" class="flex items-center justify-between pt-1.5 border-t border-dashed">
-            <span class="text-muted-foreground">Saldo proyectado tras este ingreso:</span>
+            <span class="text-muted-foreground">Disponible tras este ingreso:</span>
             <span class="flex flex-col items-end">
               <span class="font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                {{ formatCurrency(selectedAccountData.projectedBalance) }}
+                {{ formatCurrency(selectedAccountData.projectedAvailable) }}
               </span>
-              <BsHint :value="selectedAccountData.projectedBalance" inline />
+              <BsHint :value="selectedAccountData.projectedAvailable" inline />
             </span>
           </div>
         </div>
