@@ -1,24 +1,17 @@
--- ⚠️ Después de este corre transactions_optional_rate.sql (tasa y Bs vuelven a ser opcionales).
+-- ⚠️ Después de este script corre 04_transactions_optional_rate.sql.
 -- ==============================================================================
--- AMOUNT, EXCHANGE_RATE Y BS_AMOUNT OBLIGATORIOS
--- Reemplaza a transactions_exchange_rate.sql y transactions_bs_amount.sql.
+-- 03. AMOUNT, EXCHANGE_RATE Y BS_AMOUNT OBLIGATORIOS
+-- ==============================================================================
+-- Reemplaza las versiones preliminares (transactions_exchange_rate y transactions_bs_amount).
 --
 -- 1. Agrega input_currency ('USD' | 'VES'): moneda en que se digitó la transacción.
---    Antes se deducía de bs_amount IS NOT NULL; ahora bs_amount siempre tiene valor.
--- 2. Rellena las tasas vacías:
---    a. bs_amount / amount (tasa exacta de las registradas en Bs).
---    b. Tasa de la transacción del mismo usuario con fecha más cercana.
---    c. fallback_rate (abajo) para usuarios sin ninguna tasa registrada.
+-- 2. Rellena las tasas vacías (tasa implícita de Bs o tasa más cercana).
 -- 3. Rellena bs_amount = amount * exchange_rate.
--- 4. Hace NOT NULL las tres columnas.
---
--- Ejecutar en el SQL Editor de Supabase. Si algo falla no se aplica nada.
+-- 4. Hace obligatorias (NOT NULL) y con CHECK (> 0) las tres columnas.
 -- ==============================================================================
 
 DO $$
 DECLARE
-  -- 👉 Tasa Bs/USD por defecto para transacciones sin ninguna referencia.
-  --    Déjala en NULL si crees que no hace falta: el script avisará si sí.
   fallback_rate numeric := NULL;
   remaining int;
 BEGIN
@@ -85,12 +78,5 @@ BEGIN
   RAISE NOTICE '✅ amount, exchange_rate y bs_amount ahora son obligatorios.';
 END $$;
 
--- Verificación: todo en 0 excepto los conteos por moneda.
-SELECT
-  count(*) FILTER (WHERE exchange_rate IS NULL) AS sin_tasa,
-  count(*) FILTER (WHERE bs_amount IS NULL) AS sin_bs_amount,
-  count(*) FILTER (WHERE input_currency = 'VES') AS registradas_en_bs,
-  count(*) FILTER (WHERE input_currency = 'USD') AS registradas_en_usd
-FROM transactions;
-
 NOTIFY pgrst, 'reload schema';
+

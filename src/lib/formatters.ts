@@ -37,9 +37,17 @@ export function formatPercentage(value: number, decimals: number = 1): string {
   return `${(value || 0).toFixed(decimals)}%`
 }
 
+function parseLocalDate(dateStr: string): Date {
+  if (!dateStr) return new Date()
+  if (dateStr.includes('T')) return new Date(dateStr)
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return new Date(dateStr)
+  return new Date(y, m - 1, d)
+}
+
 export function formatShortDate(dateStr: string): string {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
+  const date = parseLocalDate(dateStr)
   return new Intl.DateTimeFormat('es-ES', {
     day: 'numeric',
     month: 'short',
@@ -48,7 +56,7 @@ export function formatShortDate(dateStr: string): string {
 
 export function formatFullDate(dateStr: string): string {
   if (!dateStr) return ''
-  const date = new Date(dateStr)
+  const date = parseLocalDate(dateStr)
   return new Intl.DateTimeFormat('es-ES', {
     day: 'numeric',
     month: 'short',

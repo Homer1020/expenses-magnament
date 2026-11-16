@@ -78,12 +78,21 @@ const implicitRate = computed(() => {
     : null
 })
 
+function todayLocalISODate(): string {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 const formSchema = toTypedSchema(z.object({
   amount: z.coerce.number().positive('El monto debe ser mayor a 0'),
   description: z.string().max(100).optional(),
   type: z.number({ required_error: 'Selecciona un tipo' }),
   category: z.number({ required_error: 'Selecciona una categoría' }),
   account: z.number().nullable().optional(),
+  date: z.string().min(1, 'Selecciona una fecha'),
 }))
 
 const { handleSubmit, isFieldDirty, resetForm, setFieldValue, setValues, values } = useForm<{
@@ -92,6 +101,7 @@ const { handleSubmit, isFieldDirty, resetForm, setFieldValue, setValues, values 
   type?: number
   category?: number
   account?: number | null
+  date?: string
 }>({
   validationSchema: formSchema,
   validateOnMount: false,
@@ -230,12 +240,17 @@ watch(() => open, async (isOpen) => {
     hadCustomReal.value = false
     withBs.value = transaction.exchange_rate !== null
     rateInput.value = transaction.exchange_rate ?? effectiveRate.value
+    const txDate = transaction.date
+      ? transaction.date.split('T')[0]
+      : (transaction.created_at ? transaction.created_at.split('T')[0] : todayLocalISODate())
+
     setValues({
       type: transaction.categories?.type,
       category: transaction.category_id,
       account: transaction.account_id ?? null,
       amount: inBs.value ? transaction.bs_amount ?? transaction.amount : transaction.amount,
       description: transaction.description ?? '',
+      date: txDate,
     })
   } else {
     inBs.value = defaultInBs.value && canUseBs.value
@@ -243,7 +258,16 @@ watch(() => open, async (isOpen) => {
     hadCustomReal.value = false
     withBs.value = rememberWithBs.value
     rateInput.value = effectiveRate.value
-    resetForm({ values: { type: undefined, category: undefined, account: null, amount: undefined, description: '' } })
+    resetForm({
+      values: {
+        type: undefined,
+        category: undefined,
+        account: null,
+        amount: undefined,
+        description: '',
+        date: todayLocalISODate(),
+      },
+    })
   }
   await nextTick()
   isSyncingForm.value = false
@@ -321,6 +345,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         description: formValues.description,
         category_id: formValues.category!,
         account_id: accountId,
+        date: formValues.date,
       })
       toast.success('Transacción actualizada correctamente')
     } else {
@@ -341,6 +366,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         category_id: formValues.category!,
         account_id: accountId,
         user_id: user.id,
+        date: formValues.date,
       })
       toast.success('Transacción registrada correctamente')
     }
@@ -364,26 +390,39 @@ const onSubmit = handleSubmit(async (formValues) => {
         <DialogTitle>{{ isEditing ? 'Editar Transacción' : 'Agregar Transacción' }}</DialogTitle>
       </DialogHeader>
       <form @submit="onSubmit" id="transaction-form" class="space-y-3.5">
-        <!-- Tipo -->
-        <FormField v-slot="{ componentField }" name="type" :validate-on-blur="!isFieldDirty">
-          <FormItem>
-            <FormLabel>Tipo</FormLabel>
-            <Select v-bind="componentField">
-              <FormControl class="w-full">
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un tipo" />
-                </SelectTrigger>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <!-- Tipo -->
+          <FormField v-slot="{ componentField }" name="type" :validate-on-blur="!isFieldDirty">
+            <FormItem>
+              <FormLabel>Tipo</FormLabel>
+              <Select v-bind="componentField">
+                <FormControl class="w-full">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un tipo" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem :value="1">Ingreso</SelectItem>
+                    <SelectItem :value="0">Egreso</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+
+          <!-- Fecha -->
+          <FormField v-slot="{ componentField }" name="date" :validate-on-blur="!isFieldDirty">
+            <FormItem>
+              <FormLabel>Fecha</FormLabel>
+              <FormControl>
+                <Input type="date" v-bind="componentField" />
               </FormControl>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectItem :value="1">Ingreso</SelectItem>
-                  <SelectItem :value="0">Egreso</SelectItem>
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-            <FormMessage />
-          </FormItem>
-        </FormField>
+              <FormMessage />
+            </FormItem>
+          </FormField>
+        </div>
 
         <!-- Categoría -->
         <FormField v-slot="{ componentField }" name="category" :validate-on-blur="!isFieldDirty">

@@ -1,6 +1,10 @@
--- Permite editar/eliminar las transacciones propias (RLS).
--- Sin una policy de UPDATE, Supabase actualiza 0 filas y .single() falla con
+-- ==============================================================================
+-- 01. POLÍTICAS RLS DE ACTUALIZACIÓN Y ELIMINACIÓN EN TRANSACCIONES
+-- ==============================================================================
+-- Permite editar y eliminar las transacciones propias (RLS).
+-- Sin una política de UPDATE, Supabase actualiza 0 filas y .single() falla con
 -- "Cannot coerce the result to a single JSON object".
+-- ==============================================================================
 
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
 
@@ -11,3 +15,4 @@ CREATE POLICY "transactions_update_own" ON transactions
 DROP POLICY IF EXISTS "transactions_delete_own" ON transactions;
 CREATE POLICY "transactions_delete_own" ON transactions
   FOR DELETE USING (auth.uid() = user_id);
+

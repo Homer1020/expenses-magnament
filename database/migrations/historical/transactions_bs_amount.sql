@@ -1,6 +1,9 @@
--- ⚠️ Histórico: reemplazado por transactions_required_rate.sql (columnas obligatorias).
+-- ==============================================================================
+-- ⚠️ HISTÓRICO: REEMPLAZADO POR 03_transactions_required_rate.sql
+-- ==============================================================================
 -- Agrega la columna bs_amount si hace falta y rellena el equivalente histórico
 -- solo cuando la transacción ya tiene exchange_rate válido.
+-- ==============================================================================
 
 ALTER TABLE transactions
   ADD COLUMN IF NOT EXISTS bs_amount numeric
@@ -16,3 +19,4 @@ WHERE bs_amount IS NULL
 SELECT count(*) AS sin_bs_amount
 FROM transactions
 WHERE bs_amount IS NULL;
+

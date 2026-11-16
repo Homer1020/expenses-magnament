@@ -167,7 +167,7 @@ export const generateDueTransactions = async (rate: number | null): Promise<numb
         category_id: item.category_id,
         account_id: item.account_id,
         user_id: user.id,
-        date: new Date(`${cursor}T00:00:00.000Z`).toISOString(),
+        date: cursor,
       });
 
       generatedCount++;

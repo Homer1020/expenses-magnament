@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import BsHint from '@/components/BsHint.vue'
-import { formatCurrency, formatDateTime } from '@/lib/formatters'
+import { formatCurrency, formatDateTime, formatFullDate } from '@/lib/formatters'
 import type { Transaction } from '@/types'
 import { ArrowDownRight, ArrowLeftRight, ArrowUpRight, CalendarDays, FileText, Pencil, PiggyBank, Tag } from 'lucide-vue-next'
 
@@ -77,7 +77,11 @@ const rate = computed(() => Number(props.transaction?.exchange_rate) || null)
           </div>
           <div class="flex items-center justify-between gap-4 py-2.5">
             <dt class="flex items-center gap-2 text-muted-foreground"><CalendarDays class="h-4 w-4" />Fecha</dt>
-            <dd class="font-medium">{{ formatDateTime(transaction.date) }}</dd>
+            <dd class="font-medium">{{ formatFullDate(transaction.date || transaction.created_at) }}</dd>
+          </div>
+          <div v-if="transaction.created_at" class="flex items-center justify-between gap-4 py-2.5">
+            <dt class="flex items-center gap-2 text-muted-foreground"><CalendarDays class="h-4 w-4" />Registrada</dt>
+            <dd class="text-xs text-muted-foreground">{{ formatDateTime(transaction.created_at) }}</dd>
           </div>
           <div v-if="rate" class="flex items-center justify-between gap-4 py-2.5">
             <dt class="flex items-center gap-2 text-muted-foreground"><ArrowLeftRight class="h-4 w-4" />Tasa</dt>

@@ -19,6 +19,14 @@ export interface TransactionFilters {
   endISO?: string
 }
 
+function getTodayDateString(): string {
+  const d = new Date()
+  const year = d.getFullYear()
+  const month = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
+
 export interface TransactionInput {
   amount: number
   bs_amount: number | null
@@ -28,6 +36,7 @@ export interface TransactionInput {
   category_id: number
   account_id?: number | null
   user_id: string
+  /** Fecha real de la transacción (YYYY-MM-DD). Si no se pasa, usa hoy. */
   date?: string
 }
 
@@ -35,13 +44,16 @@ export const getAll = async (filters?: TransactionFilters): Promise<Transaction[
   let query = supabase
     .from('transactions')
     .select(transactionSelect)
+    .order('date', { ascending: false })
     .order('created_at', { ascending: false });
 
   if (filters?.startISO) {
-    query = query.gte('date', filters.startISO);
+    const startDate = filters.startISO.includes('T') ? filters.startISO.split('T')[0] : filters.startISO;
+    query = query.gte('date', startDate);
   }
   if (filters?.endISO) {
-    query = query.lt('date', filters.endISO);
+    const endDate = filters.endISO.includes('T') ? filters.endISO.split('T')[0] : filters.endISO;
+    query = query.lt('date', endDate);
   }
 
   const { data, error } = await query;
@@ -51,6 +63,8 @@ export const getAll = async (filters?: TransactionFilters): Promise<Transaction[
 };
 
 export const create = async (input: TransactionInput): Promise<Transaction> => {
+  const txDate = input.date ? (input.date.includes('T') ? input.date.split('T')[0] : input.date) : getTodayDateString();
+
   const { data, error } = await supabase
     .from('transactions')
     .insert({
@@ -62,7 +76,7 @@ export const create = async (input: TransactionInput): Promise<Transaction> => {
       category_id: input.category_id,
       account_id: input.account_id ?? null,
       user_id: input.user_id,
-      date: input.date ?? new Date().toISOString(),
+      date: txDate,
     })
     .select(transactionSelect)
     .single();
@@ -73,8 +87,10 @@ export const create = async (input: TransactionInput): Promise<Transaction> => {
 
 export const update = async (
   id: number,
-  input: Pick<TransactionInput, 'amount' | 'bs_amount' | 'exchange_rate' | 'input_currency' | 'description' | 'category_id' | 'account_id'>
+  input: Pick<TransactionInput, 'amount' | 'bs_amount' | 'exchange_rate' | 'input_currency' | 'description' | 'category_id' | 'account_id' | 'date'>
 ): Promise<Transaction> => {
+  const txDate = input.date ? (input.date.includes('T') ? input.date.split('T')[0] : input.date) : undefined;
+
   const { data, error } = await supabase
     .from('transactions')
     .update({
@@ -85,6 +101,7 @@ export const update = async (
       description: input.description ?? '',
       category_id: input.category_id,
       account_id: input.account_id ?? null,
+      ...(txDate ? { date: txDate } : {}),
     })
     .eq('id', id)
     .select(transactionSelect)
