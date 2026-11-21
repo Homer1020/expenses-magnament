@@ -48,35 +48,45 @@ const { open, hide, transaction } = defineProps<{
 
 const isEditing = computed(() => !!transaction)
 
-const { currency, effectiveRate, defaultInBs } = useSettings()
+const { currency, effectiveRate, defaultInBs, exchangeRateSource, saveSettings } = useSettings()
 
 // "Monto en Bs": el usuario escribe Bs; `amount` (moneda global) se deriva con la tasa vigente.
 const inBs = ref(false)
 const canUseBs = computed(() => currency.value !== 'VES' && effectiveRate.value !== null)
 const amountLabel = computed(() => (inBs.value ? 'Monto (Bs)' : `Monto (${currency.value})`))
 
-const toUsd = (bs: number) => Math.round((bs / effectiveRate.value!) * 100) / 100
+// Tasa Bs/USD de la transacción (precargada con la del sistema, editable).
+// Se usa tanto en modo Bs (USD = Bs / tasa) como en modo USD (Bs = USD × tasa).
+const rateInput = ref<number | null>(null)
+const currentRate = computed(() => {
+  const rate = Number(rateInput.value) || 0
+  return rate > 0 ? rate : null
+})
+const toUsd = (bs: number, rate: number) => Math.round((bs / rate) * 100) / 100
 
-// Equivalente real opcional (ej. lo que costó en Binance/PayPal); vacío = tasa del sistema
-const realAmount = ref<number | null>(null)
-const hadCustomReal = ref(false)
-// Monto en USD: guardar o no su equivalente en Bs, y con qué tasa.
+// Monto en USD: guardar o no su equivalente en Bs.
 // Se recuerda la última elección (ej. apagado para comisiones PayPal).
 const rememberWithBs = useLocalStorage('expenses:tx-with-bs', true)
 const withBs = ref(true)
-const rateInput = ref<number | null>(null)
+const showRateField = computed(() => inBs.value || (currency.value !== 'VES' && withBs.value))
+const rateDiffersFromSystem = computed(() =>
+  currentRate.value !== null && currentRate.value !== effectiveRate.value
+)
+
 const bsPreview = computed(() => {
   const typed = Number(values.amount) || 0
-  const rate = Number(rateInput.value) || 0
-  return !inBs.value && withBs.value && typed > 0 && rate > 0 ? typed * rate : null
+  return !inBs.value && withBs.value && typed > 0 && currentRate.value ? typed * currentRate.value : null
 })
 
-const implicitRate = computed(() => {
-  const bs = Number(values.amount) || 0
-  return inBs.value && realAmount.value && realAmount.value > 0 && bs > 0
-    ? bs / realAmount.value
-    : null
-})
+// Si está activo al guardar, la tasa escrita pasa a ser la tasa manual global
+const updateGlobalRate = ref(false)
+
+const applyGlobalRate = async () => {
+  if (!updateGlobalRate.value || !rateDiffersFromSystem.value || !currentRate.value) return
+  const { synced } = await saveSettings({ exchangeRateSource: 'manual', manualRate: currentRate.value })
+  if (synced) toast.success('Tasa manual de las configuraciones actualizada')
+  else toast.warning('Tasa actualizada solo en este dispositivo', { description: 'No se pudo sincronizar con tu cuenta' })
+}
 
 function todayLocalISODate(): string {
   const d = new Date()
@@ -95,7 +105,7 @@ const formSchema = toTypedSchema(z.object({
   date: z.string().min(1, 'Selecciona una fecha'),
 }))
 
-const { handleSubmit, isFieldDirty, resetForm, setFieldValue, setValues, values } = useForm<{
+const { handleSubmit, resetForm, setFieldValue, setValues, values } = useForm<{
   amount?: number
   description?: string
   type?: number
@@ -126,8 +136,7 @@ const showAccountField = computed(() => {
 const usdAmount = computed(() => {
   const typed = Number(values.amount) || 0
   if (!inBs.value) return typed
-  if (realAmount.value && realAmount.value > 0) return realAmount.value
-  return effectiveRate.value ? toUsd(typed) : typed
+  return currentRate.value ? toUsd(typed, currentRate.value) : typed
 })
 
 // Calculate monthly income, expenses, and net base for budget allocation
@@ -230,14 +239,29 @@ const fetchBudgetData = async () => {
 watch(() => open, async (isOpen) => {
   if (!isOpen) return
 
+  isSyncingForm.value = true
+  updateGlobalRate.value = false
+  if (!transaction) {
+    // Se limpia antes de cargar datos para no mostrar errores viejos al abrir
+    inBs.value = defaultInBs.value && canUseBs.value
+    withBs.value = rememberWithBs.value
+    rateInput.value = effectiveRate.value
+    resetForm({
+      values: {
+        type: undefined,
+        category: undefined,
+        account: null,
+        amount: undefined,
+        description: '',
+        date: todayLocalISODate(),
+      },
+    })
+  }
+
   await fetchBudgetData()
 
-  isSyncingForm.value = true
   if (transaction) {
     inBs.value = transaction.input_currency === 'VES'
-    // La tasa guardada ya refleja el equivalente real, no hace falta precargarlo.
-    realAmount.value = null
-    hadCustomReal.value = false
     withBs.value = transaction.exchange_rate !== null
     rateInput.value = transaction.exchange_rate ?? effectiveRate.value
     const txDate = transaction.date
@@ -252,44 +276,29 @@ watch(() => open, async (isOpen) => {
       description: transaction.description ?? '',
       date: txDate,
     })
-  } else {
-    inBs.value = defaultInBs.value && canUseBs.value
-    realAmount.value = null
-    hadCustomReal.value = false
-    withBs.value = rememberWithBs.value
-    rateInput.value = effectiveRate.value
-    resetForm({
-      values: {
-        type: undefined,
-        category: undefined,
-        account: null,
-        amount: undefined,
-        description: '',
-        date: todayLocalISODate(),
-      },
-    })
   }
   await nextTick()
   isSyncingForm.value = false
 })
 
+// Al cambiar el tipo se limpia la categoría sin validar (no debe verse como error)
 watch(() => values.type, (newType, oldType) => {
   if (isSyncingForm.value || oldType === undefined) return
   if (newType !== oldType) {
-    setFieldValue('category', undefined)
-    setFieldValue('account', null)
+    setFieldValue('category', undefined, false)
+    setFieldValue('account', null, false)
   }
 })
 
 // Al alternar el check, convierte el monto digitado para no perderlo
 const onToggleBs = (checked: boolean) => {
   const typed = Number(values.amount) || 0
-  if (typed > 0 && effectiveRate.value) {
-    const converted = checked ? typed * effectiveRate.value : typed / effectiveRate.value
+  const rate = currentRate.value ?? effectiveRate.value
+  if (typed > 0 && rate) {
+    const converted = checked ? typed * rate : typed / rate
     setFieldValue('amount', Math.round(converted * 100) / 100)
   }
   inBs.value = checked
-  if (!checked) realAmount.value = null
 }
 
 const onSubmit = handleSubmit(async (formValues) => {
@@ -300,22 +309,22 @@ const onSubmit = handleSubmit(async (formValues) => {
     let bsAmount: number | null = null
     if (inBs.value) {
       bsAmount = formValues.amount!
-      if (realAmount.value && realAmount.value > 0) {
-        amount = Math.round(realAmount.value * 100) / 100
-      } else if (transaction?.input_currency === 'VES' && transaction.bs_amount === bsAmount && !hadCustomReal.value) {
-        // Si no cambió el Bs de una transacción existente, conserva su monto original
-        amount = transaction.amount
-      } else if (transaction?.exchange_rate) {
-        // Al editar, convierte con la tasa guardada, no con la de hoy
-        amount = Math.round((bsAmount / transaction.exchange_rate) * 100) / 100
-      } else if (effectiveRate.value) {
-        amount = toUsd(bsAmount)
-      } else {
-        toast.error('No hay tasa de cambio disponible para convertir los Bs')
+      if (!currentRate.value) {
+        toast.error('Escribe una tasa Bs/USD válida para convertir los Bs')
         return
       }
+      if (
+        transaction?.input_currency === 'VES' &&
+        transaction.bs_amount === bsAmount &&
+        transaction.exchange_rate === currentRate.value
+      ) {
+        // Sin cambios en Bs ni tasa: conserva el monto original (evita deriva por redondeo)
+        amount = transaction.amount
+      } else {
+        amount = toUsd(bsAmount, currentRate.value)
+      }
       if (amount <= 0) {
-        toast.error('El monto en Bs es demasiado pequeño para la tasa actual')
+        toast.error('El monto en Bs es demasiado pequeño para la tasa indicada')
         return
       }
     }
@@ -325,10 +334,10 @@ const onSubmit = handleSubmit(async (formValues) => {
     const inputCurrency = bsAmount !== null ? 'VES' : 'USD'
     let exchangeRate: number | null = null
     if (bsAmount !== null) {
-      exchangeRate = bsAmount / amount
+      exchangeRate = currentRate.value
     } else if (withBs.value) {
-      exchangeRate = Number(rateInput.value) || null
-      if (!exchangeRate || exchangeRate <= 0) {
+      exchangeRate = currentRate.value
+      if (!exchangeRate) {
         toast.error('Escribe una tasa Bs/USD válida o desactiva el equivalente en Bs')
         return
       }
@@ -371,7 +380,20 @@ const onSubmit = handleSubmit(async (formValues) => {
       toast.success('Transacción registrada correctamente')
     }
 
+    // La transacción ya quedó guardada; un fallo aquí no debe revertirla
+    try {
+      await applyGlobalRate()
+    } catch (rateErr) {
+      console.error('Error al actualizar la tasa global:', rateErr)
+      toast.warning('La transacción se guardó, pero no se pudo actualizar la tasa global')
+    }
+    updateGlobalRate.value = false
+
+    // Evita que el watcher de `type` marque error en categoría al reiniciar
+    isSyncingForm.value = true
     resetForm()
+    await nextTick()
+    isSyncingForm.value = false
     hide()
     emit('reload')
   } catch (err: any) {
@@ -392,7 +414,7 @@ const onSubmit = handleSubmit(async (formValues) => {
       <form @submit="onSubmit" id="transaction-form" class="space-y-3.5">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
           <!-- Tipo -->
-          <FormField v-slot="{ componentField }" name="type" :validate-on-blur="!isFieldDirty">
+          <FormField v-slot="{ componentField }" name="type">
             <FormItem>
               <FormLabel>Tipo</FormLabel>
               <Select v-bind="componentField">
@@ -413,7 +435,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           </FormField>
 
           <!-- Fecha -->
-          <FormField v-slot="{ componentField }" name="date" :validate-on-blur="!isFieldDirty">
+          <FormField v-slot="{ componentField }" name="date">
             <FormItem>
               <FormLabel>Fecha</FormLabel>
               <FormControl>
@@ -425,7 +447,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <!-- Categoría -->
-        <FormField v-slot="{ componentField }" name="category" :validate-on-blur="!isFieldDirty">
+        <FormField v-slot="{ componentField }" name="category">
           <FormItem>
             <FormLabel>Categoría</FormLabel>
             <Select v-bind="componentField" :disabled="values.type === undefined">
@@ -605,7 +627,7 @@ const onSubmit = handleSubmit(async (formValues) => {
         </div>
 
         <!-- Monto -->
-        <FormField v-slot="{ componentField }" name="amount" :validate-on-blur="!isFieldDirty">
+        <FormField v-slot="{ componentField }" name="amount">
           <FormItem>
             <FormLabel>{{ amountLabel }}</FormLabel>
             <FormControl>
@@ -616,23 +638,24 @@ const onSubmit = handleSubmit(async (formValues) => {
               class="block text-[11px] text-muted-foreground mt-0.5"
             >
               ≈ {{ formatCurrency(usdAmount) }}
-              <template v-if="implicitRate">· tasa real {{ implicitRate.toFixed(2) }} Bs</template>
             </span>
             <FormMessage />
           </FormItem>
         </FormField>
 
-        <!-- Equivalente en Bs (opcional, solo si el monto es en USD) -->
-        <div v-if="!inBs && currency !== 'VES'" class="space-y-2 rounded-lg border p-2.5">
-          <div class="flex items-center justify-between gap-3">
-            <div class="space-y-0.5">
-              <Label for="with-bs" class="text-sm">Guardar equivalente en Bs</Label>
-              <p class="text-[11px] text-muted-foreground">Apágalo si fue 100% en dólares (PayPal, Zelle...)</p>
-            </div>
-            <Switch id="with-bs" :model-value="withBs" @update:model-value="withBs = !!$event" />
+        <!-- Guardar equivalente en Bs (solo si el monto es en USD) -->
+        <div v-if="!inBs && currency !== 'VES'" class="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+          <div class="space-y-0.5">
+            <Label for="with-bs" class="text-sm">Guardar equivalente en Bs</Label>
+            <p class="text-[11px] text-muted-foreground">Apágalo si fue 100% en dólares (PayPal, Zelle...)</p>
           </div>
-          <div v-if="withBs" class="flex items-center gap-2">
-            <Label for="rate" class="shrink-0 text-xs text-muted-foreground">Tasa Bs/USD</Label>
+          <Switch id="with-bs" :model-value="withBs" @update:model-value="withBs = !!$event" />
+        </div>
+
+        <!-- Tasa (precargada con la del sistema, editable) -->
+        <div v-if="showRateField" class="space-y-1.5">
+          <div class="flex items-center gap-2">
+            <Label for="rate" class="shrink-0 text-sm">Tasa Bs/USD</Label>
             <Input
               id="rate"
               type="number"
@@ -643,24 +666,20 @@ const onSubmit = handleSubmit(async (formValues) => {
               @update:model-value="rateInput = $event === '' ? null : Number($event)"
             />
           </div>
-          <p v-if="bsPreview" class="text-[11px] text-muted-foreground">≈ {{ formatCurrency(bsPreview, 'VES') }}</p>
-        </div>
-
-        <!-- Equivalente real (opcional, solo si el monto es en Bs) -->
-        <div v-if="inBs" class="space-y-1.5">
-          <div class="flex items-center justify-between">
-            <Label for="real-amount">Equivalente en {{ currency }}</Label>
-            <span class="text-xs text-muted-foreground font-normal">Opcional</span>
+          <div v-if="rateDiffersFromSystem" class="flex items-center justify-between gap-3 rounded-lg border p-2.5">
+            <div class="space-y-0.5">
+              <Label for="update-global-rate" class="text-sm">Cambiar tasa manual de las configuraciones</Label>
+              <p class="text-[11px] text-muted-foreground">
+                Actual: {{ effectiveRate ? effectiveRate.toFixed(2) : '—' }}
+                ({{ exchangeRateSource === 'manual' ? 'manual' : 'BCV' }}).
+                <template v-if="updateGlobalRate">
+                  Quedará en tasa manual: {{ currentRate?.toFixed(2) }}.
+                </template>
+              </p>
+            </div>
+            <Switch id="update-global-rate" :model-value="updateGlobalRate" @update:model-value="updateGlobalRate = !!$event" />
           </div>
-          <Input
-            id="real-amount"
-            type="number"
-            step="0.01"
-            placeholder="Vacío = tasa del sistema"
-            :model-value="realAmount ?? ''"
-            @update:model-value="realAmount = $event === '' ? null : Number($event)"
-          />
-          <p class="text-[11px] text-muted-foreground">Si pagaste con otra tasa (Binance, etc.), escribe cuánto te costó realmente.</p>
+          <p v-if="bsPreview" class="text-[11px] text-muted-foreground">≈ {{ formatCurrency(bsPreview, 'VES') }}</p>
         </div>
 
         <!-- Descripción -->
@@ -668,7 +687,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           <FormItem>
             <FormLabel>Descripción</FormLabel>
             <FormControl>
-              <Textarea placeholder="Escribe una descripción..." v-bind="componentField" :validate-on-blur="!isFieldDirty" />
+              <Textarea placeholder="Escribe una descripción..." v-bind="componentField" />
             </FormControl>
             <FormMessage />
           </FormItem>
