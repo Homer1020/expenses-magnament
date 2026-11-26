@@ -3,10 +3,12 @@ import type { ColumnDef } from '@tanstack/vue-table'
 import { h } from 'vue'
 import DropdownAction from './DataTableDropdown.vue'
 import { renderAmountCell } from '@/lib/renderAmountCell'
+import { formatCurrency } from '@/lib/formatters'
 
 export interface AccountWithMetrics extends Account {
   allocatedBudget: number
   spent: number
+  sharedExpenses: number
   available: number
   spentRatio: number
 }
@@ -28,7 +30,7 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
   },
   {
     accessorKey: 'percentage',
-    header: 'Asignación',
+    header: '% del Reparto',
     cell: ({ row }) => {
       return h(
         'span',
@@ -42,7 +44,7 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
   },
   {
     accessorKey: 'allocatedBudget',
-    header: periodView === 'month' ? 'Presupuesto Mes' : 'Presupuesto Acumulado',
+    header: periodView === 'month' ? 'Ingresos del Mes' : 'Ingresos Acumulados',
     cell: ({ row }) => {
       const budget = row.original.allocatedBudget || 0
       return renderAmountCell(budget, { class: 'font-medium' })
@@ -52,13 +54,23 @@ export const columns = (emit: TableEmits, periodView: PeriodView): ColumnDef<Acc
     accessorKey: 'spent',
     header: periodView === 'month' ? 'Gastado este Mes' : 'Gastado Acumulado',
     cell: ({ row }) => {
-      const spent = row.original.spent || 0
-      return renderAmountCell(spent, { class: 'text-rose-500 font-medium' })
+      const own = row.original.spent || 0
+      const shared = row.original.sharedExpenses || 0
+      return h('div', [
+        renderAmountCell(own + shared, { class: 'text-rose-500 font-medium' }),
+        shared > 0
+          ? h(
+              'div',
+              { class: 'text-[11px] text-muted-foreground' },
+              `${formatCurrency(own)} propios + ${formatCurrency(shared)} repartidos`
+            )
+          : null,
+      ])
     },
   },
   {
     accessorKey: 'available',
-    header: 'Saldo Disponible',
+    header: 'Disponible',
     cell: ({ row }) => {
       const available = row.original.available || 0
       const isPositive = available >= 0

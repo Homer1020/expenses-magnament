@@ -19,7 +19,7 @@ import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
 import SelectValue from '@/components/ui/select/SelectValue.vue'
 import { formatCurrency } from '@/lib/formatters'
 import BsHint from '@/components/BsHint.vue'
-import { Wallet, TrendingDown, PiggyBank, Sparkles, Loader2, Eye, EyeOff } from 'lucide-vue-next'
+import { TrendingDown, TrendingUp, PiggyBank, Sparkles, Loader2, Eye, EyeOff } from 'lucide-vue-next'
 import { useCardsVisibility } from '@/composables/useCardsVisibility'
 import { toast } from 'vue-sonner'
 
@@ -98,52 +98,45 @@ const unassignedIncome = computed(() => {
     .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 })
 
-// Base de ingreso neto para repartir en los presupuestos:
-// Ingresos totales menos los egresos que no tienen presupuesto asignado
-const netDistributableIncome = computed(() => {
-  return Math.max(0, periodIncome.value - unassignedExpenses.value)
-})
+// Ingresos asignados directamente a algún presupuesto
+const assignedIncome = computed(() => periodIncome.value - unassignedIncome.value)
 
 const accountsWithMetrics = computed<AccountWithMetrics[]>(() => {
-  const distributable = netDistributableIncome.value
   return accounts.value.map((acc) => {
-    // Presupuesto asignado según el % del ingreso neto
-    const allocatedBudget = (distributable * (acc.percentage || 0)) / 100
-
-    // Gastado en este presupuesto
-    const spent = periodTransactions.value
-      .filter((t) => t.account_id === acc.id && t.categories?.type !== 1)
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+    const pct = (acc.percentage || 0) / 100
 
     // Ingresos asignados directamente a este presupuesto
     const directIncome = periodTransactions.value
       .filter((t) => t.account_id === acc.id && t.categories?.type === 1)
       .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
 
-    const totalBudgetForAcc = allocatedBudget + directIncome
-    const available = totalBudgetForAcc - spent
-    const spentRatio = totalBudgetForAcc > 0 ? (spent / totalBudgetForAcc) * 100 : 0
+    // Asignado = parte proporcional de los ingresos sin presupuesto + ingresos directos
+    const allocatedBudget = unassignedIncome.value * pct + directIncome
+
+    // Gastado directamente en este presupuesto
+    const spent = periodTransactions.value
+      .filter((t) => t.account_id === acc.id && t.categories?.type !== 1)
+      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
+
+    // Parte proporcional de los egresos sin presupuesto
+    const sharedExpenses = unassignedExpenses.value * pct
+
+    const available = allocatedBudget - spent - sharedExpenses
+    const spentRatio = allocatedBudget > 0 ? ((spent + sharedExpenses) / allocatedBudget) * 100 : 0
 
     return {
       ...acc,
       allocatedBudget,
       spent,
+      sharedExpenses,
       available,
       spentRatio,
     }
   })
 })
 
-const totalAllocated = computed(() => {
-  return accountsWithMetrics.value.reduce((sum, a) => sum + a.allocatedBudget, 0)
-})
-
 const totalBudgetSpent = computed(() => {
   return accountsWithMetrics.value.reduce((sum, a) => sum + a.spent, 0)
-})
-
-const totalBudgetAvailable = computed(() => {
-  return accountsWithMetrics.value.reduce((sum, a) => sum + a.available, 0)
 })
 
 // Saldo disponible total = dinero neto total restante en el periodo (Ingresos Totales - Egresos Totales)
@@ -261,19 +254,16 @@ const openEdit = (account: Account) => {
         <CardContent class="p-4 flex items-center justify-between">
           <div>
             <p class="text-xs font-medium text-muted-foreground">
-              Total Presupuestado <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
+              Ingresos Totales <span class="opacity-60">({{ periodView === 'month' ? 'mes actual' : 'acumulado' }})</span>
             </p>
-            <h3 class="text-lg font-bold mt-0.5">{{ formatCurrency(totalAllocated) }}</h3>
-            <BsHint :value="totalAllocated" />
-            <span
-              class="text-[11px] font-medium"
-              :class="totalPercentage === 100 ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'"
-            >
-              {{ totalPercentage }}% asignado · Base neta {{ formatCurrency(netDistributableIncome) }}
+            <h3 class="text-lg font-bold text-emerald-600 dark:text-emerald-400 mt-0.5">{{ formatCurrency(periodIncome) }}</h3>
+            <BsHint :value="periodIncome" />
+            <span class="text-[11px] text-muted-foreground font-medium">
+              {{ formatCurrency(assignedIncome) }} directos a presupuestos · {{ formatCurrency(unassignedIncome) }} sin presupuesto
             </span>
           </div>
-          <div class="p-2.5 rounded-full bg-primary/10 text-primary">
-            <Wallet class="h-5 w-5" />
+          <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+            <TrendingUp class="h-5 w-5" />
           </div>
         </CardContent>
       </Card>
@@ -287,8 +277,8 @@ const openEdit = (account: Account) => {
             <h3 class="text-lg font-bold text-rose-500 mt-0.5">{{ formatCurrency(periodExpenses) }}</h3>
             <BsHint :value="periodExpenses" />
             <span class="text-[11px] text-muted-foreground font-medium">
-              {{ formatCurrency(totalBudgetSpent) }} en presupuestos
-              <template v-if="unassignedExpenses > 0"> · {{ formatCurrency(unassignedExpenses) }} sin asignar</template>
+              {{ formatCurrency(totalBudgetSpent) }} propios de presupuestos
+              <template v-if="unassignedExpenses > 0"> · {{ formatCurrency(unassignedExpenses) }} repartidos por %</template>
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-rose-500/10 text-rose-500">
@@ -310,11 +300,12 @@ const openEdit = (account: Account) => {
               {{ formatCurrency(totalAvailable) }}
             </h3>
             <BsHint :value="totalAvailable" />
-            <span class="text-[11px] font-medium text-muted-foreground">
-              {{ formatCurrency(totalBudgetAvailable) }} en presupuestos
-              <template v-if="unassignedExpenses > 0 || unassignedIncome > 0">
-                · {{ unassignedIncome - unassignedExpenses >= 0 ? '+' : '' }}{{ formatCurrency(unassignedIncome - unassignedExpenses) }} libre
-              </template>
+            <span
+              class="text-[11px] font-medium"
+              :class="totalPercentage === 100 ? 'text-muted-foreground' : 'text-amber-500'"
+            >
+              Ingresos − Egresos
+              <template v-if="totalPercentage !== 100"> · Ojo: los % suman {{ totalPercentage }}%, la tabla no cuadra</template>
             </span>
           </div>
           <div class="p-2.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
