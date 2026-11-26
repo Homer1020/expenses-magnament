@@ -10,9 +10,12 @@ import {
   DateFormatter,
   getLocalTimeZone,
   parseDate,
+  startOfMonth,
+  startOfYear,
+  today,
 } from '@internationalized/date'
 import { CalendarIcon } from 'lucide-vue-next'
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const df = new DateFormatter('en-US', {
   dateStyle: 'medium',
@@ -26,8 +29,54 @@ const emit = defineEmits<{
   (e: 'update:modelValue', value: DateRange): void
 }>()
 
+const open = ref(false)
+
 function onRangeChange(newValue: DateRange) {
   emit('update:modelValue', newValue)
+}
+
+// Atajos de rango. `end` es exclusivo (el backend usa `date < end`), igual que el rango por defecto.
+const presets = [
+  {
+    label: 'Este mes',
+    range: () => {
+      const start = startOfMonth(today(getLocalTimeZone()))
+      return { start, end: start.add({ months: 1 }) }
+    },
+  },
+  {
+    label: 'Mes anterior',
+    range: () => {
+      const thisMonth = startOfMonth(today(getLocalTimeZone()))
+      return { start: thisMonth.subtract({ months: 1 }), end: thisMonth }
+    },
+  },
+  {
+    label: 'Últimos 30 días',
+    range: () => {
+      const t = today(getLocalTimeZone())
+      return { start: t.subtract({ days: 29 }), end: t.add({ days: 1 }) }
+    },
+  },
+  {
+    label: 'Este año',
+    range: () => {
+      const start = startOfYear(today(getLocalTimeZone()))
+      return { start, end: start.add({ years: 1 }) }
+    },
+  },
+  {
+    label: 'Año anterior',
+    range: () => {
+      const thisYear = startOfYear(today(getLocalTimeZone()))
+      return { start: thisYear.subtract({ years: 1 }), end: thisYear }
+    },
+  },
+]
+
+function applyPreset(preset: (typeof presets)[number]) {
+  emit('update:modelValue', preset.range() as DateRange)
+  open.value = false
 }
 
 // Inputs nativos (móvil): trabajan con 'YYYY-MM-DD'
@@ -49,6 +98,18 @@ function onNativeChange(edge: 'start' | 'end', value: string) {
 </script>
 
 <template>
+  <div class="flex gap-1.5 overflow-x-auto lg:hidden">
+    <Button
+      v-for="p in presets"
+      :key="p.label"
+      variant="outline"
+      size="sm"
+      class="shrink-0"
+      @click="applyPreset(p)"
+    >
+      {{ p.label }}
+    </Button>
+  </div>
   <div class="grid grid-cols-2 gap-2 lg:hidden">
     <label class="space-y-1 text-xs text-muted-foreground">
       Desde
@@ -72,7 +133,7 @@ function onNativeChange(edge: 'start' | 'end', value: string) {
     </label>
   </div>
 
-  <Popover>
+  <Popover v-model:open="open">
     <PopoverTrigger as-child>
       <Button
         variant="outline"
@@ -97,12 +158,26 @@ function onNativeChange(edge: 'start' | 'end', value: string) {
       </Button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0">
-      <RangeCalendar
-        :model-value="modelValue"
-        @update:modelValue="onRangeChange"
-        initial-focus
-        :number-of-months="2"
-      />
+      <div class="flex">
+        <div class="flex flex-col gap-1 border-r p-2">
+          <Button
+            v-for="p in presets"
+            :key="p.label"
+            variant="ghost"
+            size="sm"
+            class="justify-start"
+            @click="applyPreset(p)"
+          >
+            {{ p.label }}
+          </Button>
+        </div>
+        <RangeCalendar
+          :model-value="modelValue"
+          @update:modelValue="onRangeChange"
+          initial-focus
+          :number-of-months="2"
+        />
+      </div>
     </PopoverContent>
   </Popover>
 </template>

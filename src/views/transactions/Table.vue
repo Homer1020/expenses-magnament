@@ -11,7 +11,8 @@ import type { Transaction } from '@/types';
 import { columns } from './columns';
 import { FlexRender, getCoreRowModel, useVueTable, getPaginationRowModel, type ColumnFiltersState, getFilteredRowModel } from '@tanstack/vue-table';
 import Button from '@/components/ui/button/Button.vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { multiTermFilter, tokenize } from '@/lib/search';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input';
 import TablePicker from './TablePicker.vue';
@@ -38,6 +39,12 @@ const table = useVueTable({
   getCoreRowModel: getCoreRowModel(),
   getPaginationRowModel: getPaginationRowModel(),
   getFilteredRowModel: getFilteredRowModel(),
+  globalFilterFn: multiTermFilter,
+  meta: {
+    get searchTerms() {
+      return tokenize(globalFilter.value)
+    },
+  },
   initialState: {
     columnVisibility: { category_type: false },
   },
@@ -64,8 +71,35 @@ const table = useVueTable({
 })
 
 const typeFilter = ref('all')
+const categoryFilter = ref('all')
+
+// Categorías presentes en las transacciones cargadas, limitadas al tipo elegido
+const categoryOptions = computed(() => {
+  const names = new Set<string>()
+  for (const t of transactions) {
+    const type = t.categories?.type ? 'Ingreso' : 'Egreso'
+    if (typeFilter.value !== 'all' && type !== typeFilter.value) continue
+    if (t.categories?.name) names.add(t.categories.name)
+  }
+  return [...names].sort((a, b) => a.localeCompare(b, 'es'))
+})
+
 watch(typeFilter, (value) => {
   table.getColumn('category_type')?.setFilterValue(value === 'all' ? undefined : value)
+  if (categoryFilter.value !== 'all' && !categoryOptions.value.includes(categoryFilter.value)) {
+    categoryFilter.value = 'all'
+  }
+})
+
+watch(categoryFilter, (value) => {
+  table.getColumn('category')?.setFilterValue(value === 'all' ? undefined : value)
+})
+
+// Si al cambiar el rango de fechas la categoría ya no existe, se limpia el filtro
+watch(categoryOptions, (options) => {
+  if (categoryFilter.value !== 'all' && !options.includes(categoryFilter.value)) {
+    categoryFilter.value = 'all'
+  }
 })
 
 const updateFilters =(dateRange: DateRange) => {
@@ -90,6 +124,16 @@ const updateFilters =(dateRange: DateRange) => {
         <SelectItem value="all">Todos</SelectItem>
         <SelectItem value="Ingreso">Ingresos</SelectItem>
         <SelectItem value="Egreso">Egresos</SelectItem>
+      </SelectContent>
+    </Select>
+
+    <Select v-model="categoryFilter">
+      <SelectTrigger class="w-full lg:w-[200px]">
+        <SelectValue placeholder="Categoría" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="all">Todas las categorías</SelectItem>
+        <SelectItem v-for="name in categoryOptions" :key="name" :value="name">{{ name }}</SelectItem>
       </SelectContent>
     </Select>
 

@@ -4,6 +4,11 @@ import { h } from 'vue'
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-vue-next'
 import DropdownAction from './DataTableDropdown.vue'
 import { renderAmountCell } from '@/lib/renderAmountCell'
+import HighlightText from '@/components/HighlightText.vue'
+
+/** Términos de búsqueda activos, expuestos por la tabla vía `meta.searchTerms`. */
+const termsOf = (table: { options: { meta?: unknown } }): string[] =>
+  (table.options.meta as { searchTerms?: string[] } | undefined)?.searchTerms ?? []
 
 interface TableEmits {
   (e: 'view', transaction: Transaction): void
@@ -24,12 +29,12 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
   {
     accessorKey: 'description',
     header: 'Concepto',
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const description = row.original.description?.trim()
       return h(
         'div',
         { class: description ? 'max-w-[200px] truncate' : 'text-muted-foreground' },
-        description || '—'
+        description ? h(HighlightText, { text: description, terms: termsOf(table) }) : '—'
       )
     },
   },
@@ -53,8 +58,10 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
   {
     accessorKey: 'category',
     header: 'Categoría',
-    cell: ({ row }) => h('div', row.getValue('category')),
-    accessorFn: (row) => row.categories.name
+    cell: ({ row, table }) =>
+      h('div', h(HighlightText, { text: String(row.getValue('category') ?? ''), terms: termsOf(table) })),
+    accessorFn: (row) => row.categories.name,
+    filterFn: 'equalsString',
   },
   {
     accessorKey: 'category_type',
@@ -66,7 +73,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
   {
     accessorKey: 'account',
     header: 'Presupuesto',
-    cell: ({ row }) => {
+    cell: ({ row, table }) => {
       const account = row.original.accounts
       if (!account) {
         return h('span', { class: 'text-muted-foreground text-xs italic' }, '-')
@@ -77,7 +84,7 @@ export const columns = (emit: TableEmits): ColumnDef<Transaction>[] => [
           class:
             'inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20',
         },
-        account.name
+        h(HighlightText, { text: account.name, terms: termsOf(table) })
       )
     },
   },
