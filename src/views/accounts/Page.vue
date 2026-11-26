@@ -18,6 +18,7 @@ import SelectItem from '@/components/ui/select/SelectItem.vue'
 import SelectTrigger from '@/components/ui/select/SelectTrigger.vue'
 import SelectValue from '@/components/ui/select/SelectValue.vue'
 import { formatCurrency } from '@/lib/formatters'
+import { computeAccountMetrics } from '@/lib/budgetMetrics'
 import BsHint from '@/components/BsHint.vue'
 import { TrendingDown, TrendingUp, PiggyBank, Sparkles, Loader2, Eye, EyeOff } from 'lucide-vue-next'
 import { useCardsVisibility } from '@/composables/useCardsVisibility'
@@ -103,26 +104,8 @@ const assignedIncome = computed(() => periodIncome.value - unassignedIncome.valu
 
 const accountsWithMetrics = computed<AccountWithMetrics[]>(() => {
   return accounts.value.map((acc) => {
-    const pct = (acc.percentage || 0) / 100
-
-    // Ingresos asignados directamente a este presupuesto
-    const directIncome = periodTransactions.value
-      .filter((t) => t.account_id === acc.id && t.categories?.type === 1)
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-
-    // Asignado = parte proporcional de los ingresos sin presupuesto + ingresos directos
-    const allocatedBudget = unassignedIncome.value * pct + directIncome
-
-    // Gastado directamente en este presupuesto
-    const spent = periodTransactions.value
-      .filter((t) => t.account_id === acc.id && t.categories?.type !== 1)
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-
-    // Parte proporcional de los egresos sin presupuesto
-    const sharedExpenses = unassignedExpenses.value * pct
-
-    const available = allocatedBudget - spent - sharedExpenses
-    const spentRatio = allocatedBudget > 0 ? ((spent + sharedExpenses) / allocatedBudget) * 100 : 0
+    const { allocatedBudget, spent, sharedExpenses, available, spentRatio } =
+      computeAccountMetrics(acc, periodTransactions.value)
 
     return {
       ...acc,

@@ -12,6 +12,7 @@ import * as accountsService from '@/services/accounts'
 import * as recurringTransactionsService from '@/services/recurringTransactions'
 import type { Transaction, TransactionCategory, Account } from '@/types'
 import { formatCurrency, formatCurrencyWithBs, formatPercentage, formatShortDate } from '@/lib/formatters'
+import { computeAccountMetrics } from '@/lib/budgetMetrics'
 import BsHint from '@/components/BsHint.vue'
 import { useSettings } from '@/composables/useSettings'
 import TablePicker from '@/views/transactions/TablePicker.vue'
@@ -283,14 +284,12 @@ const expenseCategories = computed(() => {
 
 // Accounts Budget Allocation
 const accountsDistribution = computed(() => {
-  const income = totalIncome.value
   return accounts.value.map((acc) => {
-    const allocatedBudget = (income * (acc.percentage || 0)) / 100
-    const spent = transactions.value
-      .filter((t) => t.account_id === acc.id && t.categories?.type !== 1)
-      .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-    const available = allocatedBudget - spent
-    const spentRatio = allocatedBudget > 0 ? (spent / allocatedBudget) * 100 : 0
+    const m = computeAccountMetrics(acc, transactions.value)
+    const allocatedBudget = m.allocatedBudget
+    const spent = m.spent + m.sharedExpenses
+    const available = m.available
+    const spentRatio = m.spentRatio
     const fundBalance = allTimeTransactions.value
       .filter((t) => t.account_id === acc.id)
       .reduce((sum, t) => sum + (t.categories?.type === 1 ? Number(t.amount) || 0 : -(Number(t.amount) || 0)), 0)

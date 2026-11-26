@@ -28,6 +28,7 @@ import * as accountsService from '@/services/accounts'
 import * as transactionsService from '@/services/transactions'
 import type { Transaction, TransactionCategory, Account } from '@/types'
 import { formatCurrency } from '@/lib/formatters'
+import { computeAccountMetrics } from '@/lib/budgetMetrics'
 import { useSettings } from '@/composables/useSettings'
 import BsHint from '@/components/BsHint.vue'
 import { toTypedSchema } from '@vee-validate/zod'
@@ -139,42 +140,20 @@ const usdAmount = computed(() => {
   return currentRate.value ? toUsd(typed, currentRate.value) : typed
 })
 
-// Calculate monthly income, expenses, and net base for budget allocation
-const monthlyIncome = computed(() => {
-  return currentMonthTransactions.value
-    .filter((t) => t.categories?.type === 1)
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-})
-
-const unassignedMonthlyExpenses = computed(() => {
-  return currentMonthTransactions.value
-    .filter((t) => t.categories?.type !== 1 && !t.account_id && (transaction ? t.id !== transaction.id : true))
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-})
-
-// Net monthly distributable income base (gross income minus unassigned expenses)
-const monthlyNetIncome = computed(() => Math.max(0, monthlyIncome.value - unassignedMonthlyExpenses.value))
-
 const selectedAccountData = computed(() => {
   if (!values.account) return null
   const acc = accounts.value.find((a) => a.id === values.account)
   if (!acc) return null
 
   const currentAmount = usdAmount.value
-  const netBase = monthlyNetIncome.value
-  const allocatedBudget = (netBase * (acc.percentage || 0)) / 100
-
-  // Direct income assigned specifically to this account (excluding the editing transaction)
-  const directIncome = currentMonthTransactions.value
-    .filter((t) => t.account_id === acc.id && t.categories?.type === 1 && (transaction ? t.id !== transaction.id : true))
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-
-  // Sum expenses for this account this month, excluding current editing transaction
-  const spentSoFar = currentMonthTransactions.value
-    .filter((t) => t.account_id === acc.id && t.categories?.type !== 1 && (transaction ? t.id !== transaction.id : true))
-    .reduce((sum, t) => sum + (Number(t.amount) || 0), 0)
-
-  const availableBefore = allocatedBudget + directIncome - spentSoFar
+  // Misma fórmula que el módulo de presupuestos (excluye la transacción en edición)
+  const m = computeAccountMetrics(acc, currentMonthTransactions.value, { excludeTxId: transaction?.id })
+  const { allocatedBudget, directIncome } = m
+  const spentSoFar = m.spent + m.sharedExpenses
+  const ownSpent = m.spent
+  const sharedExpenses = m.sharedExpenses
+  const netBase = allocatedBudget
+  const availableBefore = m.available
 
   if (values.type === 1) {
     const projectedAvailable = availableBefore + currentAmount
@@ -186,6 +165,8 @@ const selectedAccountData = computed(() => {
       allocatedBudget,
       directIncome,
       spentSoFar,
+      ownSpent,
+      sharedExpenses,
       availableBefore,
       currentAmount,
       projectedAvailable,
@@ -201,6 +182,8 @@ const selectedAccountData = computed(() => {
     allocatedBudget,
     directIncome,
     spentSoFar,
+    ownSpent,
+    sharedExpenses,
     availableBefore,
     currentAmount,
     projectedRemaining,
@@ -512,7 +495,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div class="flex items-center justify-between">
             <span class="font-medium text-muted-foreground flex items-center gap-1.5">
               <Wallet class="h-3.5 w-3.5 text-primary" />
-              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de {{ formatCurrency(selectedAccountData.netBase) }}):
+              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de ingresos + directos):
             </span>
             <span class="flex flex-col items-end">
               <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.allocatedBudget) }}</span>
@@ -521,9 +504,12 @@ const onSubmit = handleSubmit(async (formValues) => {
           </div>
 
           <div class="flex items-center justify-between">
-            <span class="text-muted-foreground flex items-center gap-1.5">
-              <TrendingDown class="h-3.5 w-3.5 text-rose-500" />
-              Gastado este mes:
+            <span class="text-muted-foreground flex flex-col">
+              <span class="flex items-center gap-1.5">
+                <TrendingDown class="h-3.5 w-3.5 text-rose-500" />
+                Gastado este mes:
+              </span>
+              <span class="text-[10px]">{{ formatCurrency(selectedAccountData.ownSpent) }} propios + {{ formatCurrency(selectedAccountData.sharedExpenses) }} repartidos</span>
             </span>
             <span class="flex flex-col items-end">
               <span class="font-medium text-rose-500">{{ formatCurrency(selectedAccountData.spentSoFar) }}</span>
@@ -573,7 +559,7 @@ const onSubmit = handleSubmit(async (formValues) => {
           <div class="flex items-center justify-between">
             <span class="font-medium text-muted-foreground flex items-center gap-1.5">
               <Wallet class="h-3.5 w-3.5 text-primary" />
-              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de {{ formatCurrency(selectedAccountData.netBase) }}):
+              Presupuesto Mensual ({{ selectedAccountData.percentage }}% de ingresos + directos):
             </span>
             <span class="flex flex-col items-end">
               <span class="font-semibold text-foreground">{{ formatCurrency(selectedAccountData.allocatedBudget) }}</span>
