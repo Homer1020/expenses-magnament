@@ -1,52 +1,45 @@
 # Base de Datos (Database)
 
-Esta carpeta contiene los scripts SQL organizados por orden de ejecución para migraciones de esquema y datos iniciales (seeders).
-
----
+Esquema SQL y seeders para Supabase (PostgreSQL).
 
 ## 📁 Estructura
 
 ```text
 database/
-├── migrations/
-│   ├── 01_transactions_update_policy.sql
-│   ├── 02_budget_goals_and_recurring_transactions.sql
-│   ├── 03_transactions_required_rate.sql
-│   ├── 04_transactions_optional_rate.sql
-│   ├── 05_transactions_date.sql
-│   ├── 06_reset_account.sql
-│   └── historical/
-│       ├── transactions_bs_amount.sql
-│       └── transactions_exchange_rate.sql
+├── schema.sql                    # Esquema completo: tablas, índices, RLS y reset_my_data()
 ├── seeders/
-│   └── 01_seed_initial_data.sql
+│   └── 01_seed_initial_data.sql  # Datos iniciales (categorías, cuentas, metas, recurrentes)
 └── README.md
 ```
 
----
+## 🚀 Configurar la base de datos
 
-## 🚀 Orden de Ejecución de Migraciones
+1. En Supabase abre **SQL Editor > New query**.
+2. Pega el contenido de [schema.sql](schema.sql) y ejecútalo. Es idempotente: se puede re-ejecutar sin romper datos.
+3. (Opcional) Regístra un usuario y ejecuta el seeder (ver abajo).
 
-Si necesitas configurar la base de datos o aplicar actualizaciones en Supabase, ejecuta los archivos en el siguiente orden:
+`schema.sql` reemplaza a las migraciones incrementales anteriores: representa el estado final de la base.
 
-| # | Archivo | Propósito |
-|---|---|---|
-| **01** | `migrations/01_transactions_update_policy.sql` | Agrega políticas RLS para permitir `UPDATE` y `DELETE` de transacciones propias. |
-| **02** | `migrations/02_budget_goals_and_recurring_transactions.sql` | Crea las tablas `budget_goals` (metas de gasto) y `recurring_transactions` (gastos e ingresos automáticos), sus índices y políticas RLS. |
-| **03** | `migrations/03_transactions_required_rate.sql` | Agrega `input_currency` ('USD' \| 'VES'), rellena tasas históricas faltantes y monto equivalente en Bs (`bs_amount`). *(Sustituye a los scripts preliminares en `historical/`)*. |
-| **04** | `migrations/04_transactions_optional_rate.sql` | Vuelve opcional la tasa y monto en Bs para transacciones 100% en dólares (ej. comisiones PayPal, Zelle) y añade restricción de coherencia. |
-| **05** | `migrations/05_transactions_date.sql` | Agrega el campo `date` (tipo `DATE`, solo día `YYYY-MM-DD`) para la fecha real de la transacción con `DEFAULT CURRENT_DATE NOT NULL`, rellenando los registros existentes con `created_at::date` sin tocar el registro original de creación. |
-| **06** | `migrations/06_reset_account.sql` | Crea la función RPC `reset_my_data()` en PostgreSQL para que el usuario pueda vaciar sus transacciones y metas sin borrar sus categorías ni cuentas. |
+### Tablas
 
-> ℹ️ **Nota sobre `migrations/historical/`**: Contiene scripts de versiones preliminares (`transactions_bs_amount.sql` y `transactions_exchange_rate.sql`) que fueron consolidados y mejorados en la migración `03`. Se conservan únicamente como referencia histórica.
+| Tabla | Propósito |
+|---|---|
+| `categories` | Categorías de ingreso (`type = 1`) y egreso (`type = 0`). |
+| `accounts` | Cuentas de presupuesto con porcentaje de reparto. |
+| `transactions` | Transacciones en USD con `date`, `input_currency` (`USD`/`VES`) y, opcionalmente, `exchange_rate` y `bs_amount`. |
+| `budget_goals` | Límite mensual de gasto por categoría. |
+| `recurring_transactions` | Plantillas semanales/mensuales/anuales que generan transacciones. |
 
----
+Todas tienen RLS: cada usuario solo accede a sus filas. La función RPC `reset_my_data()` borra transacciones, recurrentes y metas del usuario, y conserva categorías y cuentas.
 
-## 🌱 Seeders (Datos de Prueba / Iniciales)
+### Cambios futuros
 
-Los seeders sirven para inicializar categorías, cuentas de presupuesto y metas para un usuario:
+Si cambias el esquema en una base ya existente, escribe el `ALTER` en el SQL Editor, ejecútalo y actualiza `schema.sql` para que siga reflejando el estado real.
+
+## 🌱 Seeders
 
 | Archivo | Descripción |
 |---|---|
-| `seeders/01_seed_initial_data.sql` | Reinicia las tablas (`TRUNCATE CASCADE`) y siembra 20 categorías estándar (ingresos y egresos), 5 cuentas con reparto 100%, metas de gasto mensuales y 3 transacciones recurrentes de ejemplo. Toma automáticamente el primer usuario registrado en `auth.users` o el UUID especificado en la cabecera. |
+| `seeders/01_seed_initial_data.sql` | Hace `TRUNCATE ... CASCADE` y siembra 20 categorías, 5 cuentas (100%), metas de gasto y 3 recurrentes de ejemplo. Usa el primer usuario de `auth.users` o el UUID indicado en la cabecera. |
 
+> ⚠️ El seeder **borra todos los datos** de las tablas antes de insertar. Úsalo solo en desarrollo o en una base vacía.
